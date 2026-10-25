@@ -1,0 +1,65 @@
+{
+ "alto": 2232,
+ "cielo_extra": 600,
+ "capas": [
+  {
+   "nombre": "lejos",
+   "tex": "res://assets/egipto/acto1/fondo/lejos.png",
+   "ancho": 6936,
+   "paralaje": 0.12,
+   "paralaje_y": 0.04
+  },
+  {
+   "nombre": "medio",
+   "tex": "res://assets/egipto/acto1/fondo/medio.png",
+   "ancho": 6936,
+   "paralaje": 0.34,
+   "paralaje_y": 0.12
+  }
+ ],
+ "tramos": [
+  {
+   "ref": 17,
+   "x0": 0,
+   "x1": 2912,
+   "agua": 1350,
+   "base": 1220
+  },
+  {
+   "ref": 19,
+   "x0": 2012,
+   "x1": 4924,
+   "agua": 1300,
+   "base": 1200
+  },
+  {
+   "ref": 18,
+   "x0": 4024,
+   "x1": 6936,
+   "agua": 1470,
+   "base": 1200
+  }
+ ],
+ "barcos": [
+  {
+   "tex": "res://assets/egipto/acto1/fondo/barco_vela_blanca.png",
+   "w": 95,
+   "h": 195
+  },
+  {
+   "tex": "res://assets/egipto/acto1/fondo/barco_lejano_a.png",
+   "w": 27,
+   "h": 72
+  },
+  {
+   "tex": "res://assets/egipto/acto1/fondo/barco_lejano_b.png",
+   "w": 13,
+   "h": 92
+  },
+  {
+   "tex": "res://assets/egipto/acto1/fondo/barco_vela_oscura.png",
+   "w": 157,
+   "h": 361
+  }
+ ]
+}
