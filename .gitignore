@@ -74,3 +74,6 @@ raw/master_builder/titulo_hojas/salida/title_background_hojas_mason.png
 raw/master_builder/titulo_hojas/salida/title_placa_sin_letras_mason.png
 raw/master_builder/titulo_hojas/salida/builder_depurar/
 raw/master_builder/titulo_hojas/salida/depurar/
+
+# Egipto: recortes intermedios (los rehace tools/egipto/franjas.py y medio.py)
+tools/egipto/_kit/

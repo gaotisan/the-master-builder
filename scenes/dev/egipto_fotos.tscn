@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/dev/egipto_acto1.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_fotos.gd" id="2"]
+
+[node name="EgiptoFotos" instance=ExtResource("1")]
+x_prueba = 900.0
+mirador = false
+
+[node name="Fotos" type="Node" parent="."]
+script = ExtResource("2")
+puntos = [900.0, 2250.0, 4150.0, 4700.0, 5600.0, 6200.0, 6700.0, 7400.0, 8400.0, 9300.0, 9900.0, 10900.0, 11600.0]
+carpeta = "C:/Users/SANTIA~1.OCH/AppData/Local/Temp/claude/c--Users-santiago-ochoa-godot/998aa119-a3b1-4f7e-919b-a1893153326f/scratchpad/egipto/fotos"

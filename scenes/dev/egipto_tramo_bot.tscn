@@ -1,0 +1,16 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/dev/egipto_acto1.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_bot.gd" id="2"]
+
+[node name="EgiptoTramoBot" instance=ExtResource("1")]
+x_prueba = 9505.0
+mirador = false
+
+[node name="Acciones" parent="." index="2"]
+prueba_bloques = {}
+
+[node name="Bot" type="Node" parent="."]
+script = ExtResource("2")
+traza = 0.25
+pasos = [["quieto"], ["espera", 0.6], ["corre", 1], ["espera", 3.0], ["suelta"], ["quieto"], ["fin"]]

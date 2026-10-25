@@ -1,0 +1,19 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/dev/egipto_acto1.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_fotos.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_bot.gd" id="3"]
+
+[node name="EgiptoFotosMirador" instance=ExtResource("1")]
+x_prueba = 7150.0
+
+[node name="Bot" type="Node" parent="."]
+script = ExtResource("3")
+traza = 0.0
+salir_al_acabar = false
+pasos = [["quieto"], ["der"], ["parado"], ["salta"], ["espera", 30.0]]
+
+[node name="Fotos" type="Node" parent="."]
+script = ExtResource("2")
+carpeta = "C:/Users/SANTIA~1.OCH/AppData/Local/Temp/claude/c--Users-santiago-ochoa-godot/998aa119-a3b1-4f7e-919b-a1893153326f/scratchpad/egipto/fotos"
+tiempos = [4.0, 7.0, 10.0]

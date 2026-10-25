@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/dev/egipto_acto1.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_bot.gd" id="2"]
+
+[node name="EgiptoActo1Bot" instance=ExtResource("1")]
+
+[node name="Bot" type="Node" parent="."]
+script = ExtResource("2")
+traza = 1.0
+pasos = [["quieto"], ["corre", 1], ["hasta", 2600], ["hasta", 3500], ["suelta"], ["quieto"], ["der"], ["parado"], ["suelta"], ["agacha"], ["espera", 0.8], ["der"], ["hasta", 4520], ["suelta"], ["levanta"], ["quieto"], ["der"], ["parado"], ["salta"], ["espera", 2.5], ["der"], ["parado"], ["salta"], ["espera", 2.5], ["der"], ["parado"], ["salta"], ["espera", 2.5], ["der"], ["parado"], ["salta"], ["espera", 2.5], ["der"], ["parado"], ["suelta"], ["salta"], ["quieto"], ["der"], ["hasta", 6520], ["parado"], ["suelta"], ["izq"], ["parado"], ["suelta"], ["quieto"], ["accion"], ["espera", 1.0], ["quieto"], ["salta"], ["quieto"], ["izq"], ["hasta", 6380], ["parado"], ["suelta"], ["quieto"], ["der"], ["espera", 16.0], ["suelta"], ["quieto"], ["salta"], ["quieto"], ["salta"], ["quieto"], ["der"], ["hasta", 7270], ["espera", 1.0], ["quieto"], ["der"], ["parado"], ["salta"], ["espera", 2.5], ["quieto"], ["der"], ["parado"], ["salta"], ["espera", 2.5], ["der"], ["parado"], ["salta"], ["espera", 2.5], ["der"], ["parado"], ["salta"], ["espera", 2.5], ["suelta"], ["quieto"], ["espera", 0.3], ["corre", 1], ["hasta", 10050], ["suelta"], ["quieto"], ["der"], ["parado"], ["salta"], ["espera", 2.5], ["der"], ["parado"], ["salta"], ["espera", 2.5], ["der"], ["parado"], ["suelta"], ["salta"], ["quieto"], ["der"], ["parado"], ["espera", 16.0], ["fin"]]
