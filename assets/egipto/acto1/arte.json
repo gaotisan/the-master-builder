@@ -3,7 +3,8 @@
 "trasera": 0.93,
 "detras": 1.0,
 "delante": 1.0,
-"frente": 1.18
+"frente": 1.18,
+"sombra": 1.0
 },
 "sprites": [
 {
@@ -69,7 +70,7 @@
 {
 "tex": "res://assets/egipto/acto1/tex/pieza_patio_1.png",
 "x": 6676.0,
-"y": -85.0,
+"y": -33.5,
 "capa": "detras",
 "z": -10,
 "flip": false,
@@ -105,7 +106,7 @@
 {
 "tex": "res://assets/egipto/acto1/tex/pieza_final.png",
 "x": 10002.0,
-"y": -841.4,
+"y": -980.0,
 "capa": "detras",
 "z": -10,
 "flip": false,
@@ -141,7 +142,7 @@
 {
 "tex": "res://assets/egipto/acto1/tex/viga_paso.png",
 "x": 3862.0,
-"y": -646.5,
+"y": -606.5,
 "capa": "detras",
 "z": -8,
 "flip": false,
@@ -205,8 +206,8 @@
 },
 {
 "tex": "res://assets/egipto/acto1/tex/medio_palmera_20b.png",
-"x": 1249.7,
-"y": -146.1,
+"x": 2271.0,
+"y": 53.9,
 "capa": "trasera",
 "z": -30,
 "flip": false,
@@ -222,7 +223,7 @@
 },
 {
 "tex": "res://assets/egipto/acto1/tex/medio_palmera_20c.png",
-"x": 2151.0,
+"x": 4165.8,
 "y": -159.6,
 "capa": "trasera",
 "z": -30,
@@ -239,8 +240,8 @@
 },
 {
 "tex": "res://assets/egipto/acto1/tex/medio_palmera_20a.png",
-"x": 3427.5,
-"y": -41.1,
+"x": 6650.4,
+"y": 254.9,
 "capa": "trasera",
 "z": -30,
 "flip": false,
@@ -256,8 +257,8 @@
 },
 {
 "tex": "res://assets/egipto/acto1/tex/medio_palmera_20a.png",
-"x": 4385.2,
-"y": -121.7,
+"x": 8633.9,
+"y": -165.7,
 "capa": "trasera",
 "z": -30,
 "flip": false,
@@ -273,224 +274,248 @@
 },
 {
 "tex": "res://assets/egipto/acto1/tex/medio_palmera_20a.png",
-"x": 4619.3,
-"y": -163.7,
-"capa": "trasera",
-"z": -31,
-"flip": true,
-"escala": 1.0302,
-"viento": 0.2,
-"tinte": [
-0.9791975884467051,
-0.9791975884467051,
-0.9446376735603508,
-1.0
-],
-"ancla": "base"
-},
-{
-"tex": "res://assets/egipto/acto1/tex/medio_palmera_20b.png",
-"x": 5705.2,
-"y": -70.8,
-"capa": "trasera",
-"z": -30,
-"flip": true,
-"escala": 1.4084,
-"viento": 0.2,
-"tinte": [
-1.177473255183378,
-1.177473255183378,
-1.1303743249760427,
-1.0
-],
-"ancla": "base"
-},
-{
-"tex": "res://assets/egipto/acto1/tex/medio_palmera_20a.png",
-"x": 6781.3,
-"y": 126.2,
+"x": 10709.1,
+"y": -254.2,
 "capa": "trasera",
 "z": -30,
 "flip": false,
-"escala": 1.1282,
+"escala": 1.2401,
 "viento": 0.2,
 "tinte": [
-1.1657401419455906,
-1.1657401419455906,
-1.119110536267767,
+1.1943434632305494,
+1.1943434632305494,
+1.1465697247013273,
 1.0
 ],
 "ancla": "base"
 },
 {
-"tex": "res://assets/egipto/acto1/tex/medio_palmera_20c.png",
-"x": 7809.7,
-"y": -93.9,
-"capa": "trasera",
-"z": -30,
+"tex": "res://assets/egipto/acto1/tex/suelo_arena_0.png",
+"x": -900.0,
+"y": 70.0,
+"capa": "delante",
+"z": 6,
 "flip": false,
-"escala": 1.4204,
-"viento": 0.2,
-"tinte": [
-1.0672294181184125,
-1.0672294181184125,
-1.024540241393676,
-1.0
-],
-"ancla": "base"
-},
-{
-"tex": "res://assets/egipto/acto1/tex/medio_palmera_20c.png",
-"x": 8560.3,
-"y": -130.3,
-"capa": "trasera",
-"z": -30,
-"flip": false,
-"escala": 1.3698,
-"viento": 0.2,
-"tinte": [
-1.1256496244526115,
-1.1256496244526115,
-1.080623639474507,
-1.0
-],
-"ancla": "base"
-},
-{
-"tex": "res://assets/egipto/acto1/tex/medio_palmera_20b.png",
-"x": 8720.7,
-"y": -184.4,
-"capa": "trasera",
-"z": -31,
-"flip": false,
-"escala": 1.2143,
-"viento": 0.2,
-"tinte": [
-0.9568021807847198,
-0.9568021807847198,
-0.9230326920511414,
-1.0
-],
-"ancla": "base"
-},
-{
-"tex": "res://assets/egipto/acto1/tex/medio_palmera_20a.png",
-"x": 9776.1,
-"y": 22.4,
-"capa": "trasera",
-"z": -30,
-"flip": true,
-"escala": 1.0937,
-"viento": 0.2,
-"tinte": [
-1.1179114340982819,
-1.1179114340982819,
-1.0731949767343505,
-1.0
-],
-"ancla": "base"
-},
-{
-"tex": "res://assets/egipto/acto1/tex/medio_palmera_20b.png",
-"x": 11120.6,
-"y": -587.2,
-"capa": "trasera",
-"z": -30,
-"flip": false,
-"escala": 1.1013,
-"viento": 0.2,
-"tinte": [
-1.0593821323307002,
-1.0593821323307002,
-1.0170068470374722,
-1.0
-],
-"ancla": "base"
-},
-{
-"tex": "res://assets/egipto/acto1/tex/frente_1.png",
-"x": 2100.0,
-"y": 412.2,
-"capa": "frente",
-"z": 30,
-"flip": true,
-"escala": 1.5606,
+"escala": 1.0,
 "viento": 0.0,
-"tinte": [
-0.2367134772341498,
-0.2556505554128818,
-0.2248778033724423,
-1.0
-],
-"ancla": "base"
+"tinte": null,
+"ancla": "arriba_izq"
 },
 {
-"tex": "res://assets/egipto/acto1/tex/frente_1.png",
-"x": 4857.5,
-"y": 359.0,
-"capa": "frente",
-"z": 30,
-"flip": true,
-"escala": 1.5932,
-"viento": 0.0,
-"tinte": [
-0.31286828421209745,
-0.33789774694906527,
-0.29722487000149256,
-1.0
-],
-"ancla": "base"
-},
-{
-"tex": "res://assets/egipto/acto1/tex/frente_2.png",
-"x": 7060.8,
-"y": 476.6,
-"capa": "frente",
-"z": 30,
+"tex": "res://assets/egipto/acto1/tex/suelo_arena_1.png",
+"x": 1148.0,
+"y": 70.0,
+"capa": "delante",
+"z": 6,
 "flip": false,
-"escala": 1.7391,
+"escala": 1.0,
 "viento": 0.0,
-"tinte": [
-0.2410533552176445,
-0.2603376236350561,
-0.22900068745676228,
-1.0
-],
-"ancla": "base"
+"tinte": null,
+"ancla": "arriba_izq"
 },
 {
-"tex": "res://assets/egipto/acto1/tex/frente_1.png",
-"x": 9532.4,
-"y": 394.3,
-"capa": "frente",
-"z": 30,
-"flip": true,
-"escala": 1.6776,
+"tex": "res://assets/egipto/acto1/tex/suelo_arena_2.png",
+"x": 3196.0,
+"y": 70.0,
+"capa": "delante",
+"z": 6,
+"flip": false,
+"escala": 1.0,
 "viento": 0.0,
-"tinte": [
-0.2261925431724329,
-0.24428794662622755,
-0.21488291601381124,
-1.0
-],
-"ancla": "base"
+"tinte": null,
+"ancla": "arriba_izq"
 },
 {
-"tex": "res://assets/egipto/acto1/tex/frente_2.png",
-"x": 12025.9,
-"y": 209.5,
-"capa": "frente",
-"z": 30,
-"flip": true,
-"escala": 1.8283,
+"tex": "res://assets/egipto/acto1/tex/suelo_arena_3.png",
+"x": 5244.0,
+"y": 70.0,
+"capa": "delante",
+"z": 6,
+"flip": false,
+"escala": 1.0,
 "viento": 0.0,
-"tinte": [
-0.2310858837138936,
-0.2495727544110051,
-0.2195315895281989,
-1.0
-],
-"ancla": "base"
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/suelo_arena_4.png",
+"x": 7292.0,
+"y": 70.0,
+"capa": "delante",
+"z": 6,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/suelo_arena_5.png",
+"x": 9340.0,
+"y": 70.0,
+"capa": "delante",
+"z": 6,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/suelo_arena_6.png",
+"x": 11388.0,
+"y": 70.0,
+"capa": "delante",
+"z": 6,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/suelo_arena_7.png",
+"x": 13436.0,
+"y": 70.0,
+"capa": "delante",
+"z": 6,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pieza_llegada.png",
+"x": -1296.0,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pieza_muro_largo.png",
+"x": 1708.3,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pieza_escaleras.png",
+"x": 3911.0,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pieza_bloques.png",
+"x": 4698.4,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pieza_patio_0.png",
+"x": 6251.1,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pieza_patio_1.png",
+"x": 6638.1,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pieza_estructura_alta.png",
+"x": 6338.2,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pieza_ruinas.png",
+"x": 6900.7,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pieza_final.png",
+"x": 8875.0,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pilar_paso.png",
+"x": 3534.8,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
+},
+{
+"tex": "res://assets/egipto/acto1/tex/sombra_pilar_paso_f.png",
+"x": 4177.9,
+"y": -6.5,
+"capa": "sombra",
+"z": 0,
+"flip": false,
+"escala": 1.0,
+"viento": 0.0,
+"tinte": null,
+"ancla": "arriba_izq"
 }
 ]
 }
