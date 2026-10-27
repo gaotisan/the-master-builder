@@ -184,6 +184,30 @@ def linea_cielo(img, desde):
     return cv2.resize(top.reshape(1, -1), (W, 1), interpolation=cv2.INTER_LINEAR).ravel() / e
 
 
+def silueta(img, desde, lin):
+    """La silueta de lo que no es cielo (montanas, piramides, ciudad) por
+    columna, para que la lluvia de naves se pierda justo detras (2026-10-27).
+    Por color (Lab, medido): las montanas son rosadas (a > 16), malva (a > 9
+    con b no mucho mayor) o, en sombra, mas oscuras que el cielo (L < 160, la
+    cara en sombra de la piramide es azulada); el cielo naranja tiene a ~11
+    pero b ~35 y es muy claro (con a > 11 a secas la linea se iba al cielo junto
+    a la piramide y las naves desaparecian antes de tiempo). Los saltos de color
+    no valian: las nubes facetadas tambien los tienen."""
+    H, W = img.shape[:2]
+    lab = cv2.cvtColor(cv2.GaussianBlur(img, (0, 0), 1.5), cv2.COLOR_BGR2LAB).astype(np.int32)
+    L, a, b = lab[..., 0], lab[..., 1] - 128, lab[..., 2] - 128
+    monte = (a > 16) | ((L < 160) & (a > -4)) | ((a > 9) & (b < a + 8) & (L < 200))
+    monte = cv2.erode(monte.astype(np.uint8), np.ones((4, 1), np.uint8)) > 0
+    top = np.full(W, float(H), np.float32)
+    y_ini = np.clip(lin.astype(int) - 80, desde, H - 1)
+    for x in range(W):
+        ys = np.where(monte[y_ini[x]:, x])[0]
+        if len(ys):
+            top[x] = ys[0] + y_ini[x]
+    from scipy.ndimage import median_filter
+    return median_filter(top, size=7)
+
+
 def agua_hacia_abajo(img, borde, n):
     """Quita la playa: por debajo de 'borde' (menos un margen), el agua de las
     filas de justo encima repetida en espejo y algo mas oscura, y luego n filas
@@ -282,10 +306,16 @@ def lejos(vista):
     cielo = np.where(debajo[..., None], fila[None, :, :], cielo.astype(np.float32))
     m = cv2.GaussianBlur(debajo.astype(np.float32), (0, 0), 6)[..., None]
     cielo = np.clip(L2 * (1 - m) + cielo * m, 0, 255).astype(np.uint8)
+    # la silueta (para la lluvia de naves), cada 8 px, en px de juego de la capa
+    global SILUETA
+    sil = silueta(L2, EXTRA_ARRIBA, lin)[::8]
+    y_l2 = (-EXTRA_ARRIBA - T.Y_PISA) * ESCALA_LEJOS - T.PLANTA
+    SILUETA = {"x0": X0, "paso": 8 * ESCALA_LEJOS,
+               "y": [round(float(v) * ESCALA_LEJOS + y_l2, 1) for v in sil]}
     # el aire: la ciudad, lejana, algo del color del cielo del horizonte
     global HORIZONTE
     HORIZONTE = color_horizonte(cielo, lin)
-    ciudad = aire(ciudad, HORIZONTE, AIRE_CIUDAD)
+    ciudad = aire(igualar_luz(ciudad, **LUZ_CIUDAD), HORIZONTE, AIRE_CIUDAD)
     yb = float(np.median(borde)) + EXTRA_ARRIBA          # fila del borde de la playa en L2
     # la fila 0 de L2 es la -EXTRA_ARRIBA de la imagen; la fila Y_PISA de la imagen es y = 0
     y0 = (-EXTRA_ARRIBA - T.Y_PISA) * ESCALA_LEJOS - T.PLANTA
@@ -457,15 +487,27 @@ def mascara_orilla(img, y_agua):
 # imagenes con el cielo crema dorado y queda mucho mas amarilla y oscura que la
 # ciudad del fondo (Lab b 153 contra 135, L 97 contra 150): se le quita casi todo
 # el amarillo de mas y se aclara un poco (mas cerca, puede ser algo mas oscura)
-LUZ_ORILLA = {"dL": 12.0, "db": -11.0, "da": 0.0, "contraste": 0.92}
+LUZ_ORILLA = {"dL": 12.0, "db": -11.0, "da": 0.0, "contraste": 0.8}
 # EL AIRE: lo lejano se mezcla con el color del cielo del horizonte
-AIRE_CIUDAD = 0.14
-AIRE_ORILLA = 0.05
+AIRE_CIUDAD = 0.28
+AIRE_ORILLA = 0.12
+# EL ESCALONADO DE LOS PLANOS (2026-10-27, comparado con las composiciones que
+# gustan: lejos palido, plano y algo frio, contraste ~27; delante oscuro y con
+# contraste ~65. Aqui estaba al reves: la ciudad con 45 y la playa, lo mas
+# cercano, la mas plana (31) y la mas naranja)
+LUZ_CIUDAD = {"dL": 8.0, "db": -8.0, "da": 0.0, "contraste": 0.62}
+LUZ_ARENA = {"dL": -10.0, "db": -10.0, "da": -2.0, "contraste": 1.35}
 HORIZONTE = None        # (lo pone lejos(): el color del aire)
+SILUETA = None          # (lo pone lejos(): la silueta de montanas y ciudad, para la lluvia)
 CALIMA_ORILLA = 0.12
 FILA_ORILLA = 830.0     # (lo pone sin_raya_orilla(): la fila del agua de la orilla de enfrente)
 LINEA_ORILLA = None     # (y por columna)
-NAVE_TORRE = (995.0, 473.0)  # la azotea de la torre alta, en px de la tira media
+# las naves: (donde se posa en px de la primera imagen del fondo), hacia donde
+# se va, y como empieza (una llega al poco, otra despega pronto)
+NAVES = [((1430, 420), -1.0, "posada", 12.0, 60.0), ((1565, 414), 1.0, "posada", 45.0, 60.0),
+         ((1765, 413), 1.0, "fuera", 6.0, 60.0),
+         # (y en los edificios iguales del principio, mas lejos: mas pequenas)
+         ((330, 528), 1.0, "posada", 70.0, 44.0), ((820, 612), -1.0, "fuera", 30.0, 38.0)]
 
 
 def igualar_luz(bgra, dL=0.0, da=0.0, db=0.0, contraste=1.0):
@@ -725,7 +767,7 @@ def medio(vista):
     y0 = (0 - T.Y_PISA) * ESCALA_MEDIO - T.PLANTA
     # ---- la arena de delante (con lo plantado en ella), a la escala del juego
     a, _ = T.separar(M)
-    arena = np.dstack([M, (a * 255).astype(np.uint8)])
+    arena = igualar_luz(np.dstack([M, (a * 255).astype(np.uint8)]), **LUZ_ARENA)
     arena = T.alargar_abajo(arena, T.EXTRA_ABAJO)
     delante = arena.copy()
     y_corte = T.Y_PISA + 22
@@ -767,6 +809,8 @@ def main():
         capas += medio(vista)
         quita += ["arena", "arena_delante"]
     datos = {"escala": ESCALA, "x0": X0, "ancho": ancho, "quita": quita, "capas": capas}
+    if SILUETA:
+        datos["silueta"] = SILUETA
     # los barcos (tools/egipto/barcos.py): en su capa, justo delante de la orilla
     # de enfrente, por el agua de entre ella y nuestra playa
     e = ESCALA
@@ -775,11 +819,18 @@ def main():
     datos["barcos"] = {"tras": "orilla", "cuantos": 3, "prof": [0.0, 0.4], "alto": [55.0, 120.0],
                        "rapidez": [4.0, 9.0], "p": 0.68, "py": 0.42, "y0": (930 - T.Y_PISA) * e, "y1": (1330 - T.Y_PISA) * e,
                        "x0": X0, "x1": 17000.0}
-    # la nave (2026-10-27, un guino del usuario): posada en la azotea plana de la
-    # torre alta del principio de la orilla (px de la tira media: x 973-1017, y 472)
-    if os.path.isdir(os.path.join(REFS, MEDIO["carpeta"])):
-        datos["nave"] = {"capa": "orilla", "x": X0 + NAVE_TORRE[0] * ESCALA_MEDIO,
-                         "y": (NAVE_TORRE[1] - T.Y_PISA) * ESCALA_MEDIO - T.PLANTA, "ancho": 30.0}
+    # las naves (2026-10-27, un guino del usuario): en las azoteas planas de los
+    # pilonos gemelos de la ciudad del fondo (px de la primera imagen del fondo:
+    # el primero de x 1340 a 1630, el segundo de 1675 a 1840, arriba en y ~414)
+    def en_ciudad(x, y):
+        return X0 + x * ESCALA_LEJOS, (y - T.Y_PISA) * ESCALA_LEJOS - T.PLANTA
+    datos["naves"] = []
+    for (x, y), sentido, estado, espera, ancho_n in NAVES:
+        px, py = en_ciudad(x, y)
+        # (las mas pequenas, mas lejos: mas aire)
+        datos["naves"].append({"capa": "ciudad", "x": round(px, 1), "y": round(py, 1), "ancho": ancho_n,
+                               "aire": 0.22 if ancho_n >= 60.0 else 0.32,
+                               "sentido": sentido, "estado": estado, "espera": espera})
     # donde se acaba la arena (la playa no puede seguir mas alla)
     for c in capas:
         if c["nombre"] == "arena":

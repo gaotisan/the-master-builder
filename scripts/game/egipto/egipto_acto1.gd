@@ -104,11 +104,9 @@ var _polvo: CPUParticles2D
 var _x_fin := 0.0
 var _fondo_capas: Array = []     # [CanvasLayer, paralaje x, paralaje y]
 var _barcos: Array = []          # [Sprite2D, reflejo, x0, x1, velocidad, y, fase]
-var _nave_datos: Dictionary = {}
-var _nave: Sprite2D
-var _nave_estado := "posada"      # posada, despega, fuera, llega
-var _nave_t := 0.0                 # tiempo en el estado
-var _nave_dura := 25.0             # lo que dura el estado (posada y fuera)
+var _naves: Array = []
+var _con_capas := false
+var _datos_capas: Dictionary = {}
 var _tira_capas: Array = []      # [CanvasLayer, paralaje x, paralaje y]
 var _con_tira := false
 var _arena_delante: CanvasLayer
@@ -210,7 +208,6 @@ func _physics_process(delta: float) -> void:
 	_mover_bandas(delta)
 	_mover_sombra()
 	_mover_barcos(delta)
-	_mover_nave(delta)
 	if _polvo:
 		_polvo.position = _cam_pos
 
@@ -591,7 +588,9 @@ func _montar_tira() -> void:
 	var quita: Array = []
 	if ResourceLoader.exists(CAPAS) or FileAccess.file_exists(CAPAS):
 		var otras: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CAPAS))
-		_nave_datos = otras.get("nave", {})
+		_naves = otras.get("naves", [])
+		_datos_capas = otras
+		_con_capas = true
 		quita = otras.get("quita", [])
 		for c in otras["capas"]:
 			lista.append([c, otras])
@@ -630,8 +629,9 @@ func _montar_tira() -> void:
 			s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 			capa.add_child(s)
 		_tira_capas.append([capa, float(c["p"]), float(c["py"]), float(c.get("deriva", 0.0))])
-		if not _nave_datos.is_empty() and String(_nave_datos.get("capa", "")) == String(c["nombre"]):
-			_poner_nave(capa)
+		_poner_naves(capa, String(c["nombre"]))
+		if String(c["nombre"]) == "ciudad" and _con_capas:
+			_poner_lluvia(capa)
 		if c.has("costa") and not c["trozos"].is_empty():
 			_calima(capa, c, float(datos["x0"]), float(datos["ancho"]) * float(c.get("escala", e)) / e)
 		# los barcos, en su capa, justo delante de la que dice capas.json
@@ -850,81 +850,37 @@ func _mover_barcos(delta: float) -> void:
 		s.modulate.a = 0.92 * a
 		r.modulate.a = 0.22 * a
 
-## ---- la nave ------------------------------------------------------------------
-## Un guino (2026-10-27): una nave pequenita, como las de Planet of Lana, posada
-## en la azotea plana de la torre alta del principio de la orilla. De vez en
-## cuando despega y se va, y al rato llega otra y se posa. Muy sutil: lejana,
-## con el aire de la orilla. La imagen, recortada de Midjourney (barcos.py sobre
-## verde) en assets/egipto/acto1/nave/nave_0.png; sin ella no sale nada.
-const NAVE_TEX := "res://assets/egipto/acto1/nave/nave_0.png"
-const NAVE_SUBE := 520.0           # px (de la capa) que sube al irse / desde donde baja
+## La lluvia de naves (LluviaNaves, el homenaje a Planet of Lana): en la capa de
+## la ciudad, por delante de su cielo, cayendo a la vista y perdiendose tras la
+## silueta de las montanas.
+func _poner_lluvia(capa: CanvasLayer) -> void:
+	var lluvia := LluviaNaves.new()
+	var sil: Dictionary = _datos_capas.get("silueta", {})
+	if not sil.is_empty():
+		lluvia.silueta = PackedFloat32Array(sil["y"])
+		lluvia.sil_x0 = float(sil["x0"])
+		lluvia.sil_paso = float(sil["paso"])
+	lluvia.donde = func() -> Rect2:
+		return capa.transform.affine_inverse() * Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
+	capa.add_child(lluvia)
 
-func _poner_nave(capa: CanvasLayer) -> void:
-	if not ResourceLoader.exists(NAVE_TEX):
-		return
-	var tex: Texture2D = load(NAVE_TEX)
-	_nave = Sprite2D.new()
-	_nave.texture = tex
-	_nave.centered = false
-	# (los pies en el punto: la parte de abajo centrada)
-	_nave.offset = Vector2(-tex.get_width() * 0.5, -tex.get_height())
-	var e: float = float(_nave_datos.get("ancho", 30.0)) / tex.get_width()
-	_nave.scale = Vector2(e, e)
-	_nave.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	# (con el aire de la orilla: lejana)
-	_nave.modulate = Color(0.95, 0.95, 0.98)
-	capa.add_child(_nave)
-	_nave_estado = "posada"
-	_nave_t = 0.0
-	_nave_dura = 25.0   # (la primera vez, pronto: para verlo)
-	_mover_nave(0.0)
-
-func _mover_nave(delta: float) -> void:
-	if _nave == null:
-		return
-	_nave_t += delta
-	var base := Vector2(float(_nave_datos["x"]), float(_nave_datos["y"]))
-	var t := _nave_t
-	match _nave_estado:
-		"posada":
-			_nave.position = base
-			_nave.rotation = 0.0
-			_nave.modulate.a = 1.0
-			if t > _nave_dura:
-				_cambiar_nave("despega", 9.0)
-		"despega":
-			# se eleva despacio, se queda un instante y se va hacia arriba y a la derecha
-			var k := t / _nave_dura
-			var sube := smoothstep(0.0, 0.35, k) * 30.0
-			var vete := pow(clampf((k - 0.4) / 0.6, 0.0, 1.0), 2.0)
-			_nave.position = base + Vector2(vete * 700.0, -sube - vete * NAVE_SUBE) + Vector2(0.0, sin(t * 3.0) * 1.2)
-			_nave.rotation = -0.18 * clampf((k - 0.35) / 0.2, 0.0, 1.0)
-			_nave.modulate.a = 1.0 - clampf((k - 0.75) / 0.25, 0.0, 1.0)
-			if k >= 1.0:
-				_cambiar_nave("fuera", randf_range(15.0, 30.0))
-		"fuera":
-			_nave.modulate.a = 0.0
-			if t > _nave_dura:
-				_cambiar_nave("llega", 11.0)
-		"llega":
-			# aparece arriba a la izquierda, baja en curva frenando, flota y se posa
-			var k := t / _nave_dura
-			var u := 1.0 - pow(1.0 - clampf(k / 0.8, 0.0, 1.0), 3.0)
-			var desde := Vector2(-600.0, -NAVE_SUBE)
-			var p := desde.lerp(Vector2(0.0, -24.0), u)
-			var posa := smoothstep(0.8, 1.0, k)
-			p.y = lerpf(p.y, 0.0, posa)
-			p.y += sin(t * 3.0) * 1.2 * (1.0 - posa)
-			_nave.position = base + p
-			_nave.rotation = 0.12 * (1.0 - u)
-			_nave.modulate.a = clampf(k / 0.2, 0.0, 1.0)
-			if k >= 1.0:
-				_cambiar_nave("posada", randf_range(35.0, 70.0))
-
-func _cambiar_nave(estado: String, dura: float) -> void:
-	_nave_estado = estado
-	_nave_t = 0.0
-	_nave_dura = dura
+## ---- las naves -----------------------------------------------------------------
+## Un guino (2026-10-27): naves pequenitas, como las de Planet of Lana, en las
+## azoteas de los pilonos gemelos de la ciudad del fondo, que despegan y llegan
+## (NavePosada; las de capas.json "naves", cada una en su capa).
+func _poner_naves(capa: CanvasLayer, nombre: String) -> void:
+	for n in _naves:
+		if String(n.get("capa", "")) != nombre:
+			continue
+		var nave := NavePosada.new()
+		nave.position = Vector2(float(n["x"]), float(n["y"]))
+		nave.ancho = float(n.get("ancho", 40.0))
+		nave.sentido = float(n.get("sentido", 1.0))
+		nave.estado = String(n.get("estado", "posada"))
+		nave.espera = float(n.get("espera", 20.0))
+		nave.subida = float(n.get("subida", 520.0))
+		nave.aire_k = float(n.get("aire", nave.aire_k))
+		capa.add_child(nave)
 
 ## ---- luz y aire --------------------------------------------------------------
 

@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/dev/nave_prueba.gd" id="1"]
+
+[node name="NavePrueba" type="Node3D"]
+script = ExtResource("1")
+carpeta = "C:/Users/SANTIA~1.OCH/AppData/Local/Temp/claude/c--Users-santiago-ochoa-godot/998aa119-a3b1-4f7e-919b-a1893153326f/scratchpad/nave"
