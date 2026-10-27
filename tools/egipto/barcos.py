@@ -3,8 +3,11 @@
 cada barco suelto, sin el verde ni su reflejo en los bordes (despill).
 
 Escribe assets/egipto/acto1/barcos/barco_N.png. Uso: python tools/egipto/barcos.py
+Tambien vale para otras piezas sobre verde (la nave, 2026-10-27):
+    python tools/egipto/barcos.py origen.png carpeta_destino prefijo
 """
 import os
+import sys
 
 import cv2
 import numpy as np
@@ -15,9 +18,9 @@ ORIGEN = os.path.join(PROYECTO, "raw", "master_builder", "referencias", "egipto_
 DESTINO = os.path.join(PROYECTO, "assets", "egipto", "acto1", "barcos")
 
 
-def main():
-    os.makedirs(DESTINO, exist_ok=True)
-    im = cv2.imdecode(np.fromfile(ORIGEN, np.uint8), cv2.IMREAD_COLOR).astype(np.float32)
+def main(origen=ORIGEN, destino=DESTINO, prefijo="barco"):
+    os.makedirs(destino, exist_ok=True)
+    im = cv2.imdecode(np.fromfile(origen, np.uint8), cv2.IMREAD_COLOR).astype(np.float32)
     b, g, r = im[..., 0], im[..., 1], im[..., 2]
     # cuanto verde de croma hay: el verde por encima del mayor de los otros dos
     verde = g - np.maximum(r, b)
@@ -37,10 +40,13 @@ def main():
         cerca = cv2.dilate((lab[y0:y1, x0:x1] == i).astype(np.uint8), np.ones((9, 9), np.uint8)) > 0
         alfa = np.where(cerca, a[y0:y1, x0:x1], 0)
         rgba = np.dstack([np.clip(im[y0:y1, x0:x1], 0, 255).astype(np.uint8), (alfa * 255).astype(np.uint8)])
-        cv2.imencode(".png", rgba)[1].tofile(os.path.join(DESTINO, "barco_%d.png" % k))
-        print("barco_%d" % k, rgba.shape)
+        cv2.imencode(".png", rgba)[1].tofile(os.path.join(destino, "%s_%d.png" % (prefijo, k)))
+        print("%s_%d" % (prefijo, k), rgba.shape)
         k += 1
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) >= 4:
+        main(sys.argv[1], sys.argv[2], sys.argv[3])
+    else:
+        main()

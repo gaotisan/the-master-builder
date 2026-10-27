@@ -104,6 +104,11 @@ var _polvo: CPUParticles2D
 var _x_fin := 0.0
 var _fondo_capas: Array = []     # [CanvasLayer, paralaje x, paralaje y]
 var _barcos: Array = []          # [Sprite2D, reflejo, x0, x1, velocidad, y, fase]
+var _nave_datos: Dictionary = {}
+var _nave: Sprite2D
+var _nave_estado := "posada"      # posada, despega, fuera, llega
+var _nave_t := 0.0                 # tiempo en el estado
+var _nave_dura := 25.0             # lo que dura el estado (posada y fuera)
 var _tira_capas: Array = []      # [CanvasLayer, paralaje x, paralaje y]
 var _con_tira := false
 var _arena_delante: CanvasLayer
@@ -191,6 +196,7 @@ func _physics_process(delta: float) -> void:
 	_mover_bandas(delta)
 	_mover_sombra()
 	_mover_barcos(delta)
+	_mover_nave(delta)
 	if _polvo:
 		_polvo.position = _cam_pos
 
@@ -571,6 +577,7 @@ func _montar_tira() -> void:
 	var quita: Array = []
 	if ResourceLoader.exists(CAPAS) or FileAccess.file_exists(CAPAS):
 		var otras: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CAPAS))
+		_nave_datos = otras.get("nave", {})
 		quita = otras.get("quita", [])
 		for c in otras["capas"]:
 			lista.append([c, otras])
@@ -600,6 +607,8 @@ func _montar_tira() -> void:
 			s.texture = load(tr["tex"])
 			if agua_mat:
 				s.material = agua_mat
+			elif c.get("viento", false):
+				s.material = _material_orilla(String(tr["tex"]), float(c.get("costa", 0.5)))
 			s.centered = false
 			var ec: float = c.get("escala", e)
 			s.scale = Vector2(ec, ec)
@@ -607,6 +616,8 @@ func _montar_tira() -> void:
 			s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 			capa.add_child(s)
 		_tira_capas.append([capa, float(c["p"]), float(c["py"]), float(c.get("deriva", 0.0))])
+		if not _nave_datos.is_empty() and String(_nave_datos.get("capa", "")) == String(c["nombre"]):
+			_poner_nave(capa)
 		if c.has("costa") and not c["trozos"].is_empty():
 			_calima(capa, c, float(datos["x0"]), float(datos["ancho"]) * float(c.get("escala", e)) / e)
 		# los barcos, en su capa, justo delante de la que dice capas.json
@@ -617,7 +628,8 @@ func _montar_tira() -> void:
 			cb.name = "Tira_barcos"
 			add_child(cb)
 			_tira_capas.append([cb, float(bd["p"]), float(bd["py"]), 0.0])
-			_barcos_tira(cb, float(bd["x0"]), float(bd["x1"]), float(bd["y0"]), float(bd["y1"]), 0.0, 1.0)
+			_barcos_tira(cb, float(bd["x0"]), float(bd["x1"]), float(bd["y0"]), float(bd["y1"]),
+					float(bd.get("prof", [0.0, 1.0])[0]), float(bd.get("prof", [0.0, 1.0])[1]), bd)
 		if c.has("agua") and not c["trozos"].is_empty() and not datos.has("barcos"):
 			# la franja del agua en el juego (coordenadas de la capa)
 			var tr0: Dictionary = c["trozos"][0]
@@ -628,6 +640,22 @@ func _montar_tira() -> void:
 			var x1: float = float(datos["x0"]) + float(datos["ancho"]) * ec / e
 			_barcos_tira(capa, float(datos["x0"]), x1, y0, y1)
 		k += 1
+
+## La orilla de enfrente: el viento en su vegetacion (con su mascara, la pieza
+## *_viento_N de al lado) y el temblor de su reflejo.
+const ORILLA := preload("res://scripts/game/egipto/orilla.gdshader")
+var _ruido_tex: NoiseTexture2D
+func _material_orilla(tex: String, costa: float) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = ORILLA
+	var mascara := tex.replace("medio_orilla_", "medio_orilla_viento_")
+	if ResourceLoader.exists(mascara):
+		m.set_shader_parameter("viento", load(mascara))
+	if _ruido_tex == null:
+		_ruido_tex = _ruido_rachas()
+	m.set_shader_parameter("ruido", _ruido_tex)
+	m.set_shader_parameter("costa", costa)
+	return m
 
 ## El ruido de las rachas de viento del agua (estirado en el shader).
 func _ruido_rachas() -> NoiseTexture2D:
@@ -679,7 +707,8 @@ const BARCOS_TEX := ["res://assets/egipto/acto1/barcos/barco_0.png",
 		"res://assets/egipto/acto1/barcos/barco_2.png",
 		"res://assets/egipto/acto1/barcos/barco_3.png"]
 @export var barcos_cuantos := 7
-func _barcos_tira(capa: CanvasLayer, x0: float, x1: float, y0: float, y1: float, prof0 := 0.12, prof1 := 0.6) -> void:
+## (con 'conf', de capas.json: cuantos, alto [min, max] y rapidez [min, max])
+func _barcos_tira(capa: CanvasLayer, x0: float, x1: float, y0: float, y1: float, prof0 := 0.12, prof1 := 0.6, conf := {}) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 41
 	var texs: Array = []
@@ -688,11 +717,14 @@ func _barcos_tira(capa: CanvasLayer, x0: float, x1: float, y0: float, y1: float,
 			texs.append(load(r))
 	if texs.is_empty():
 		return
-	for i in barcos_cuantos:
+	var alto: Array = conf.get("alto", [110.0, 230.0])
+	var rapidez: Array = conf.get("rapidez", [8.0, 26.0])
+	for i in int(conf.get("cuantos", barcos_cuantos)):
 		var tex: Texture2D = texs[i % texs.size()]
-		var prof := rng.randf_range(prof0, prof1)            # 0 la otra orilla, 1 la cercana
+		# (repartidos en profundidad, no al azar: que no coincidan dos a la misma altura)
+		var prof := lerpf(prof0, prof1, (float(i) + rng.randf_range(0.2, 0.8)) / float(int(conf.get("cuantos", barcos_cuantos))))
 		var y := lerpf(y0, y1, prof)
-		var alto_obj := lerpf(110.0, 230.0, prof)             # alto del barco en el juego
+		var alto_obj := lerpf(float(alto[0]), float(alto[1]), prof)    # alto del barco en el juego
 		var esc := alto_obj / tex.get_height()
 		var s := Sprite2D.new()
 		s.texture = tex
@@ -709,7 +741,7 @@ func _barcos_tira(capa: CanvasLayer, x0: float, x1: float, y0: float, y1: float,
 		r.modulate = Color(0.85, 0.9, 1.0, 0.25)
 		capa.add_child(r)
 		capa.add_child(s)
-		var v := lerpf(8.0, 26.0, prof) * (1.0 if rng.randf() < 0.5 else -1.0)
+		var v := lerpf(float(rapidez[0]), float(rapidez[1]), prof) * (1.0 if rng.randf() < 0.5 else -1.0)
 		s.flip_h = v < 0.0
 		r.flip_h = s.flip_h
 		_barcos.append([s, r, x0 + 400.0, x1 - 400.0, v, y, rng.randf() * TAU, rng.randf_range(x0 + 400.0, x1 - 400.0)])
@@ -803,6 +835,82 @@ func _mover_barcos(delta: float) -> void:
 		var a := clampf(borde / 300.0, 0.0, 1.0)
 		s.modulate.a = 0.92 * a
 		r.modulate.a = 0.22 * a
+
+## ---- la nave ------------------------------------------------------------------
+## Un guino (2026-10-27): una nave pequenita, como las de Planet of Lana, posada
+## en la azotea plana de la torre alta del principio de la orilla. De vez en
+## cuando despega y se va, y al rato llega otra y se posa. Muy sutil: lejana,
+## con el aire de la orilla. La imagen, recortada de Midjourney (barcos.py sobre
+## verde) en assets/egipto/acto1/nave/nave_0.png; sin ella no sale nada.
+const NAVE_TEX := "res://assets/egipto/acto1/nave/nave_0.png"
+const NAVE_SUBE := 520.0           # px (de la capa) que sube al irse / desde donde baja
+
+func _poner_nave(capa: CanvasLayer) -> void:
+	if not ResourceLoader.exists(NAVE_TEX):
+		return
+	var tex: Texture2D = load(NAVE_TEX)
+	_nave = Sprite2D.new()
+	_nave.texture = tex
+	_nave.centered = false
+	# (los pies en el punto: la parte de abajo centrada)
+	_nave.offset = Vector2(-tex.get_width() * 0.5, -tex.get_height())
+	var e: float = float(_nave_datos.get("ancho", 30.0)) / tex.get_width()
+	_nave.scale = Vector2(e, e)
+	_nave.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	# (con el aire de la orilla: lejana)
+	_nave.modulate = Color(0.95, 0.95, 0.98)
+	capa.add_child(_nave)
+	_nave_estado = "posada"
+	_nave_t = 0.0
+	_nave_dura = 25.0   # (la primera vez, pronto: para verlo)
+	_mover_nave(0.0)
+
+func _mover_nave(delta: float) -> void:
+	if _nave == null:
+		return
+	_nave_t += delta
+	var base := Vector2(float(_nave_datos["x"]), float(_nave_datos["y"]))
+	var t := _nave_t
+	match _nave_estado:
+		"posada":
+			_nave.position = base
+			_nave.rotation = 0.0
+			_nave.modulate.a = 1.0
+			if t > _nave_dura:
+				_cambiar_nave("despega", 9.0)
+		"despega":
+			# se eleva despacio, se queda un instante y se va hacia arriba y a la derecha
+			var k := t / _nave_dura
+			var sube := smoothstep(0.0, 0.35, k) * 30.0
+			var vete := pow(clampf((k - 0.4) / 0.6, 0.0, 1.0), 2.0)
+			_nave.position = base + Vector2(vete * 700.0, -sube - vete * NAVE_SUBE) + Vector2(0.0, sin(t * 3.0) * 1.2)
+			_nave.rotation = -0.18 * clampf((k - 0.35) / 0.2, 0.0, 1.0)
+			_nave.modulate.a = 1.0 - clampf((k - 0.75) / 0.25, 0.0, 1.0)
+			if k >= 1.0:
+				_cambiar_nave("fuera", randf_range(15.0, 30.0))
+		"fuera":
+			_nave.modulate.a = 0.0
+			if t > _nave_dura:
+				_cambiar_nave("llega", 11.0)
+		"llega":
+			# aparece arriba a la izquierda, baja en curva frenando, flota y se posa
+			var k := t / _nave_dura
+			var u := 1.0 - pow(1.0 - clampf(k / 0.8, 0.0, 1.0), 3.0)
+			var desde := Vector2(-600.0, -NAVE_SUBE)
+			var p := desde.lerp(Vector2(0.0, -24.0), u)
+			var posa := smoothstep(0.8, 1.0, k)
+			p.y = lerpf(p.y, 0.0, posa)
+			p.y += sin(t * 3.0) * 1.2 * (1.0 - posa)
+			_nave.position = base + p
+			_nave.rotation = 0.12 * (1.0 - u)
+			_nave.modulate.a = clampf(k / 0.2, 0.0, 1.0)
+			if k >= 1.0:
+				_cambiar_nave("posada", randf_range(35.0, 70.0))
+
+func _cambiar_nave(estado: String, dura: float) -> void:
+	_nave_estado = estado
+	_nave_t = 0.0
+	_nave_dura = dura
 
 ## ---- luz y aire --------------------------------------------------------------
 

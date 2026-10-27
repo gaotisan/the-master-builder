@@ -97,3 +97,61 @@ del ribazo y les falta casco):
 ```
 Three ancient Egyptian felucca sailing boats on the Nile seen strictly from the side, triangular lateen sails, wooden hulls, small boatmen, geometric low poly painterly style, warm morning light, each boat separate, isolated on a flat solid #00FF00 green background, no text --ar 3:1 --v 8.2
 ```
+
+## 6. La playa: pájaros, vegetación de delante y la orilla de aquí (2026-10-27)
+
+Para la escena de la playa (fondo por capas). Todo sobre **verde liso**, para
+recortarlo limpio, y con la luz de las tiras nuevas: **neutra**, nada de
+"golden" (las tiras se volvían naranjas).
+
+- Estilo: `--sref` con una de las tiras medias (`raw/master_builder/referencias/egipto_medio/tira_00.png`) y `--sw 300`.
+- Siempre `--no orange tint, golden hour, sunset`.
+- Vista de lado estricta (ortográfica), como el juego.
+
+**6a. Pájaros (hoja de vuelo).** Bandadas lejanas que cruzan el cielo y alguna
+garza sobre el agua. De una hoja con las posiciones de las alas se monta el aleteo.
+
+```
+Sprite sheet of one ancient Egyptian river bird in flight, a grey heron, strict side view facing right, 8 evenly spaced poses of a full wingbeat cycle in a single row, same size and same height in every pose, geometric low poly painterly style, soft neutral morning light, isolated on a flat solid #00FF00 green background, no shadows, no text --ar 4:1 --v 8.2 --no orange tint, golden hour, sunset
+```
+
+```
+Sprite sheet of small birds in flight seen from the side, swallows and small egrets, 12 separate birds in different wing positions arranged in a loose grid with space between them, geometric low poly painterly style, soft neutral light, isolated on a flat solid #00FF00 green background, no text --ar 3:2 --v 8.2 --no orange tint, golden hour, sunset
+```
+
+Si prefieres que el aleteo sea un vídeo (más fluido): en Flow, la garza de la
+primera imagen *volando en el sitio sobre verde, de lado, un ciclo de aleteo
+lento que se repite*, sin cámara que se mueva.
+
+**6b. Vegetación de delante (piezas sueltas).** Es lo que hoy se ve más irreal:
+matas sin base. Piezas con su pie de barro o arena, de varios tamaños, para
+agruparlas en la orilla y alguna muy cerca, delante del peregrino.
+
+```
+Set of separate riverbank plants of the ancient Nile, strict side view, each one standing on its own small base of wet mud and sand: tall papyrus clumps with umbrella heads, thin reeds, short river grass tufts, a low tamarisk shrub, a young date palm sapling, a few lotus leaves at the water edge; 7 separate pieces arranged in a row with wide space between them, varied heights, natural irregular silhouettes, geometric low poly painterly style, soft neutral morning light from the upper left, isolated on a flat solid #00FF00 green background, no ground plane, no text --ar 3:1 --v 8.2 --no orange tint, golden hour, sunset
+```
+
+```
+Very close foreground papyrus stems and long reed leaves seen from the side, a dense clump rising from the bottom edge, large in frame, slightly out of focus, darker in shadow, geometric low poly painterly style, isolated on a flat solid #00FF00 green background, no text --ar 2:3 --v 8.2 --no orange tint, golden hour, sunset
+```
+
+**6c. La orilla de aquí (franja).** Donde el agua toca nuestra playa: hoy la
+arena corta el agua de golpe. Una franja larga que se repite y enlaza.
+
+```
+Long horizontal strip of the near bank of the Nile seen strictly from the side, orthographic elevation: the line where calm shallow water meets the beach, dark wet sand and mud, a thin bright wet edge, scattered pebbles, low reed tufts and small papyrus at intervals, a few lotus leaves floating, flat and horizontal, no perspective, no vanishing point, geometric low poly painterly style, soft neutral morning light, everything above the waterline and below the sand is flat solid #00FF00 green, no characters, no text --ar 6:1 --v 8.2 --no orange tint, golden hour, sunset
+```
+
+Y para que enlace, el mismo truco de siempre: mover la imagen fuera del
+lienzo y pedir *Extend the image seamlessly to the right* con el mismo texto.
+
+**6d. La nave (un guiño).** Pequeñita, posada en la azotea plana de la torre
+alta del principio de la orilla; de vez en cuando despega y al rato llega otra
+y se posa. Al estilo de las de *Planet of Lana*: casco liso y orgánico, oscuro,
+con alguna luz. Se recorta con
+`python tools/egipto/barcos.py <imagen> assets/egipto/acto1/nave nave` (sale
+`nave_0.png`, que el juego ya busca).
+
+```
+A small sleek alien scout ship in the style of Planet of Lana, strict side view, smooth rounded organic hull like a seed pod, dark graphite and pale ivory panels, a thin soft cyan glowing strip, two short landing legs extended underneath, minimal and elegant, geometric low poly painterly style, soft neutral morning light from the upper left, centered, isolated on a flat solid #00FF00 green background, no shadows, no text --ar 3:2 --v 8.2 --no orange tint, golden hour, sunset
+```

@@ -7,7 +7,7 @@ import os
 
 AQUI = os.path.dirname(os.path.realpath(__file__))
 PROYECTO = os.path.dirname(os.path.dirname(AQUI))
-CARPETAS = [os.path.join(PROYECTO, "assets", "egipto", "acto1", c) for c in ("tex", "objetos", "fondo", "tira", "capas", "barcos")]
+CARPETAS = [os.path.join(PROYECTO, "assets", "egipto", "acto1", c) for c in ("tex", "objetos", "fondo", "tira", "capas", "barcos", "nave")]
 
 PARAMS = """[params]
 

@@ -464,6 +464,8 @@ AIRE_ORILLA = 0.05
 HORIZONTE = None        # (lo pone lejos(): el color del aire)
 CALIMA_ORILLA = 0.12
 FILA_ORILLA = 830.0     # (lo pone sin_raya_orilla(): la fila del agua de la orilla de enfrente)
+LINEA_ORILLA = None     # (y por columna)
+NAVE_TORRE = (995.0, 473.0)  # la azotea de la torre alta, en px de la tira media
 
 
 def igualar_luz(bgra, dL=0.0, da=0.0, db=0.0, contraste=1.0):
@@ -569,6 +571,43 @@ def limpiar_filos(o, img, ancho=3.0):
     return np.dstack([np.clip(Fo, 0, 255).astype(np.uint8), (A * 255).astype(np.uint8)])
 
 
+VIENTO_ALTO = 260.0      # px por encima del agua en que las copas ya se mecen del todo
+
+
+def mascara_viento(orilla, img, y_agua):
+    """Cuanto se mece cada punto de la orilla (2026-10-27): la vegetacion (verde,
+    oscura o dorada por el sol, no la piedra clara), mas cuanto mas alta sobre
+    el agua, ensanchada un poco para que se mueva tambien el aire de alrededor
+    de las copas (si no, la copa se recortaria contra su hueco). En gris."""
+    H, W = img.shape[:2]
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    hh, ss, vv = hsv[..., 0], hsv[..., 1], hsv[..., 2]
+    veg = ((hh >= 25) & (hh <= 95)) | ((vv < 110) & ((hh < 5) | (hh > 16))) | ((hh >= 17) & (ss > 160))
+    veg &= orilla[..., 3] > 128
+    veg = cv2.morphologyEx(veg.astype(np.uint8), cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    veg = cv2.dilate(veg, np.ones((9, 9), np.uint8)).astype(np.float32)
+    veg = cv2.GaussianBlur(veg, (0, 0), 4)
+    Y = np.arange(H)[:, None].astype(np.float32)
+    alto = np.clip((y_agua[None, :] - Y) / VIENTO_ALTO, 0, 1)
+    m = veg * alto * alto
+    return (np.clip(m, 0, 1) * 255).astype(np.uint8)
+
+
+def tapar_agua(orilla, img, linea, y_orilla):
+    """Por debajo de la linea de la orilla todo es reflejo: nada transparente
+    (2026-10-27: trozos de agua azul del reflejo pasaban por cielo y quedaban
+    huecos, "marcas que rompen el reflejo"). El color, el de la imagen; el alfa,
+    solo la rampa con la que el reflejo se funde con el agua del fondo."""
+    H, W = img.shape[:2]
+    Y = np.arange(H)[:, None].astype(np.float32)
+    debajo = Y > linea[None, :] + 6
+    rampa = 1.0 - np.clip((Y - y_orilla[None, :] - REFLEJO * 0.4) / (REFLEJO * 0.6), 0, 1)
+    out = orilla.copy()
+    out[..., :3] = np.where(debajo[..., None], img, orilla[..., :3])
+    out[..., 3] = np.where(debajo, (rampa * 255).astype(np.uint8), orilla[..., 3])
+    return out
+
+
 def _media_cercana(I, m, sigmas):
     """El color medio de los puntos de la mascara m alrededor de cada punto,
     el de mas cerca primero (si no hay cerca, de mas lejos)."""
@@ -649,8 +688,9 @@ def sin_raya_orilla(img):
         corta |= banda & az & ~np.roll(az, 5, axis=0) & ~np.roll(az, -6, axis=0)
         corta = cv2.morphologyEx(corta.astype(np.uint8), cv2.MORPH_OPEN, np.ones((1, 9), np.uint8))
         m = m | corta
-        global FILA_ORILLA
+        global FILA_ORILLA, LINEA_ORILLA
         FILA_ORILLA = float(np.median(fila))
+        LINEA_ORILLA = fila.copy()
     m = cv2.dilate(m, np.ones((5, 5), np.uint8))
     print("  raya de la orilla: %d px" % int(m.sum()))
     return cv2.inpaint(img, m, 4, cv2.INPAINT_TELEA)
@@ -673,6 +713,10 @@ def medio(vista):
     y_orilla = agua_top - 40
     orilla = mascara_orilla(M, y_orilla)
     orilla = limpiar_filos(orilla, M)
+    # (con la linea de la raya de la orilla: la del agua azul cae mas abajo)
+    linea = LINEA_ORILLA if LINEA_ORILLA is not None else agua_top - 130
+    orilla = tapar_agua(orilla, M, linea, y_orilla)
+    trocear("medio_orilla_viento", mascara_viento(orilla, M, linea), 0, ESCALA_MEDIO)
     orilla = igualar_luz(orilla, **LUZ_ORILLA)
     if HORIZONTE is not None:
         orilla = aire(orilla, HORIZONTE, AIRE_ORILLA)
@@ -696,7 +740,7 @@ def medio(vista):
         # (la calima en su base, la del agua: mas suave que la de la ciudad)
         {"nombre": "orilla", "p": 0.55, "py": 0.32, "escala": ESCALA_MEDIO,
          "costa": FILA_ORILLA / M.shape[0], "calima": CALIMA_ORILLA, "calima_alto": 300.0,
-         "trozos": trocear("medio_orilla", orilla, y0, ESCALA_MEDIO)},
+         "viento": True, "trozos": trocear("medio_orilla", orilla, y0, ESCALA_MEDIO)},
         {"nombre": "arena", "p": 1.0, "py": 1.0, "trozos": tr("medio_arena", arena, 0)},
         {"nombre": "arena_delante", "p": 1.0, "py": 1.0, "delante": True,
          "trozos": tr("medio_arena_delante", delante, y_corte)},
@@ -726,8 +770,16 @@ def main():
     # los barcos (tools/egipto/barcos.py): en su capa, justo delante de la orilla
     # de enfrente, por el agua de entre ella y nuestra playa
     e = ESCALA
-    datos["barcos"] = {"tras": "orilla", "p": 0.68, "py": 0.42, "y0": (930 - T.Y_PISA) * e, "y1": (1330 - T.Y_PISA) * e,
+    # (2026-10-27: eran demasiados y uno pasaba pegado a la playa; pocos, lejos,
+    # pequenos y lentos)
+    datos["barcos"] = {"tras": "orilla", "cuantos": 3, "prof": [0.0, 0.4], "alto": [55.0, 120.0],
+                       "rapidez": [4.0, 9.0], "p": 0.68, "py": 0.42, "y0": (930 - T.Y_PISA) * e, "y1": (1330 - T.Y_PISA) * e,
                        "x0": X0, "x1": 17000.0}
+    # la nave (2026-10-27, un guino del usuario): posada en la azotea plana de la
+    # torre alta del principio de la orilla (px de la tira media: x 973-1017, y 472)
+    if os.path.isdir(os.path.join(REFS, MEDIO["carpeta"])):
+        datos["nave"] = {"capa": "orilla", "x": X0 + NAVE_TORRE[0] * ESCALA_MEDIO,
+                         "y": (NAVE_TORRE[1] - T.Y_PISA) * ESCALA_MEDIO - T.PLANTA, "ancho": 30.0}
     # donde se acaba la arena (la playa no puede seguir mas alla)
     for c in capas:
         if c["nombre"] == "arena":
