@@ -490,6 +490,85 @@ def color_horizonte(cielo, lin):
     return cielo[max(0, y1 - 300):y1, :, :3].reshape(-1, 3).mean(0)
 
 
+def limpiar_filos(o, img, ancho=3.0):
+    """Ultima pasada sobre el recorte (2026-10-27, "siguen teniendo amarillo"):
+    en el filo de lo opaco (a <= ancho px de lo transparente) se vuelve a medir
+    cuanto es hoja y cuanto cielo, con el cielo real de al lado (de la imagen,
+    donde ya es transparente) y la hoja de dentro; el filo crema se vuelve
+    transparente y lo que queda, sin el cielo mezclado. Donde la hoja y el cielo
+    se parecen (muros y columnas claras) no se toca. Revisar con revisar_orilla.py."""
+    A = o[..., 3].astype(np.float32) / 255
+    Fo = o[..., :3].astype(np.float32)
+    H, W = A.shape
+    # los bolsillos de cielo encerrados en la vegetacion (no tocan lo transparente):
+    # lisos, del color crema del cielo y rodeados casi del todo de hoja
+    # (del color del cielo real de esa zona, el de lo ya transparente alrededor:
+    # en la segunda mitad de la tira el cielo es mas amarillo y saturado)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    hh, vv = hsv[..., 0], hsv[..., 2]
+    If = img.astype(np.float32)
+    Sz = np.zeros_like(If)
+    for c0 in range(0, W, 2048):
+        a0, a1 = max(0, c0 - 300), min(W, c0 + 2048 + 300)
+        s_ = _media_cercana(If[:, a0:a1], A[:, a0:a1] < 0.1, (10, 40, 120))
+        Sz[:, c0:c0 + 2048] = s_[:, c0 - a0:c0 - a0 + 2048]
+    dist_cielo = np.linalg.norm(If - Sz, axis=2)
+    crema = (dist_cielo < 32) & (A > 0.5) & (vv > 150)
+    # (hoja: verde, o muy oscura y no parda; las sombras de los muros son pardas)
+    hoja = (((hh >= 25) & (hh <= 95) & (vv < 200)) | ((vv < 110) & ((hh < 5) | (hh > 22)))) & ~crema
+    transp_ = A < 0.1
+    n, lab, st, _ = cv2.connectedComponentsWithStats(crema.astype(np.uint8), 8)
+    if n > 1:
+        from scipy.ndimage import grey_dilation
+        anillo_lab = grey_dilation(lab, size=(7, 7))
+        anillo = (anillo_lab > 0) & (lab == 0)
+        tot = np.bincount(anillo_lab[anillo], minlength=n)
+        de_hoja = np.bincount(anillo_lab[anillo & hoja], minlength=n)
+        de_cielo = np.bincount(anillo_lab[anillo & transp_], minlength=n)
+        area = st[:, cv2.CC_STAT_AREA]
+        # (rodeado de hoja, o de hoja y del cielo ya quitado, con bastante hoja)
+        tot1 = np.maximum(tot, 1)
+        # (o pequeno, muy del color del cielo y rodeado de cualquier cosa solida:
+        # entre hojas doradas por el sol, que no cuentan como hoja; un muro o una
+        # columna son trozos mayores)
+        d_media = np.bincount(lab.ravel(), dist_cielo.ravel(), minlength=n) / np.maximum(area, 1)
+        solido = np.bincount(anillo_lab[anillo & ~transp_ & ~crema], minlength=n)
+        bolsa = ((((de_hoja > 0.7 * tot1) | ((de_hoja > 0.35 * tot1) & (de_hoja + de_cielo > 0.9 * tot1)))
+                  & (area < 3000))
+                 | ((area < 600) & (d_media < 20) & (solido > 0.6 * tot1))
+                 | ((area < 3000) & (d_media < 12) & (solido > 0.6 * tot1))) & (area >= 6)
+        bolsa[0] = False
+        quitar = cv2.dilate(bolsa[lab].astype(np.uint8), np.ones((3, 3), np.uint8)) > 0
+        A[quitar & crema] = 0.0
+        print("  bolsillos de cielo en la vegetacion: %d" % int(bolsa.sum()))
+    TROZO, M_ = 2048, 64
+    for c0 in range(0, W, TROZO):
+        a0, a1 = max(0, c0 - M_), min(W, c0 + TROZO + M_)
+        a = A[:, a0:a1]
+        I = img[:, a0:a1].astype(np.float32)
+        transp = a < 0.1
+        d = cv2.distanceTransform((~transp).astype(np.uint8), cv2.DIST_L2, 3)
+        filo = (a > 0.1) & (d <= ancho)
+        dentro = (a > 0.95) & (d > ancho + 1)
+        Sk = _media_cercana(I, transp, (2, 6, 20))
+        Fk = _media_cercana(I, dentro, (2, 6, 20))
+        FS = Fk - Sk
+        n2 = (FS * FS).sum(2)
+        t = np.clip(((I - Sk) * FS).sum(2) / np.maximum(n2, 1), 0, 1)
+        t = np.clip((t - 0.08) / 0.84, 0, 1)
+        vale = filo & (n2 > 50 ** 2)
+        nuevo_a = np.where(vale, np.minimum(a, t), a)
+        F = np.clip((I - (1 - nuevo_a[..., None]) * Sk) / np.maximum(nuevo_a[..., None], 0.05), 0, 255)
+        k = np.clip((nuevo_a - 0.3) / 0.4, 0, 1)[..., None]
+        F = Fk * (1 - k) + F * k
+        b0 = c0 - a0
+        sl = slice(b0, b0 + TROZO)
+        v = vale[:, sl]
+        A[:, c0:c0 + TROZO] = np.where(v, nuevo_a[:, sl], A[:, c0:c0 + TROZO])
+        Fo[:, c0:c0 + TROZO] = np.where(v[..., None], F[:, sl], Fo[:, c0:c0 + TROZO])
+    return np.dstack([np.clip(Fo, 0, 255).astype(np.uint8), (A * 255).astype(np.uint8)])
+
+
 def _media_cercana(I, m, sigmas):
     """El color medio de los puntos de la mascara m alrededor de cada punto,
     el de mas cerca primero (si no hay cerca, de mas lejos)."""
@@ -593,6 +672,7 @@ def medio(vista):
     # ellos se daba por opaco)
     y_orilla = agua_top - 40
     orilla = mascara_orilla(M, y_orilla)
+    orilla = limpiar_filos(orilla, M)
     orilla = igualar_luz(orilla, **LUZ_ORILLA)
     if HORIZONTE is not None:
         orilla = aire(orilla, HORIZONTE, AIRE_ORILLA)
