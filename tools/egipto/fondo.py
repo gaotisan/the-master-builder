@@ -23,6 +23,9 @@ import sys
 import cv2
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from grado import graduar  # noqa: E402
+
 AQUI = os.path.dirname(os.path.realpath(__file__))
 PROYECTO = os.path.dirname(os.path.dirname(AQUI))
 REFS = os.path.join(PROYECTO, "raw", "master_builder", "referencias", "egipto_primer_plano")
@@ -224,11 +227,30 @@ def main():
     arriba = cv2.resize(L[:40], (L.shape[1], extra), interpolation=cv2.INTER_LINEAR)
     arriba = cv2.GaussianBlur(arriba, (0, 0), sigmaX=6, sigmaY=20)
     L = np.vstack([arriba, L])
-    # (la union, fundida: sin linea entre lo estirado y la imagen)
-    f = 120
+    # el cielo de arriba, con las pinceladas de las imagenes de estilo (no
+    # estirado): la franja de cielo limpia de estilo_1, en espejo a lo ancho, con el
+    # color de lo de arriba de nuestra imagen, fundida en ella
+    est = leer(os.path.join(REFS, "estilo_1.png"))[0:150]
+    est = cv2.resize(est, None, fx=2.0, fy=2.0, interpolation=cv2.INTER_CUBIC)
+    fila = []
+    k = 0
+    while sum(f.shape[1] for f in fila) < L.shape[1]:
+        fila.append(est if k % 2 == 0 else est[:, ::-1])
+        k += 1
+    cielo = np.hstack(fila)[:, :L.shape[1]]
+    cielo = cv2.resize(cielo, (L.shape[1], extra + 200), interpolation=cv2.INTER_LINEAR).astype(np.float32)
+    # mismo color medio que la parte de arriba de nuestra imagen
+    ref_m = L[extra:extra + 80].reshape(-1, 3).astype(np.float32).mean(0)
+    cielo += (ref_m - cielo[-80:].reshape(-1, 3).mean(0))
+    L = L.astype(np.float32)
+    L[:extra] = cielo[:extra]
+    f = 200
     r = np.linspace(0, 1, f)[:, None, None]
-    L[extra:extra + f] = (arriba[-1:].astype(np.float32) * (1 - r) + L[extra:extra + f] * r).astype(np.uint8)
+    L[extra:extra + f] = cielo[extra:extra + f] * (1 - r) + L[extra:extra + f] * r
+    L = np.clip(L, 0, 255).astype(np.uint8)
     M = np.vstack([np.zeros((extra, M.shape[1], 4), np.uint8), M])
+    L = graduar(L, "lejos")
+    M = graduar(M, "medio")
     cv2.imencode(".png", L)[1].tofile(os.path.join(DESTINO, "lejos.png"))
     cv2.imencode(".png", M)[1].tofile(os.path.join(DESTINO, "medio.png"))
     bs = barcos()

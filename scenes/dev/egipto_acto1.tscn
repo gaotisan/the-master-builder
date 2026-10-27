@@ -13,3 +13,4 @@ caida_al_empezar = false
 [node name="Acciones" type="Node2D" parent="."]
 script = ExtResource("3")
 ayuda = false
+solo_playa = true

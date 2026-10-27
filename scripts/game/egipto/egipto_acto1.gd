@@ -33,6 +33,19 @@ const BASTON := preload("res://scenes/characters/baston.tscn")
 const ARTE := "res://assets/egipto/acto1/arte.json"
 const VIENTO := preload("res://scripts/game/egipto/viento.gdshader")
 const FONDO := "res://assets/egipto/acto1/fondo/fondo.json"
+## LA TIRA (tools/egipto/tira.py): las extensiones de Midjourney cosidas; si
+## esta, manda sobre el fondo viejo, la arena repetida y las palmeras de detras.
+const TIRA := "res://assets/egipto/acto1/tira/tira.json"
+## LAS CAPAS de tiras generadas por separado (tools/egipto/capas.py): van
+## delante de las de la tira en la lista y quitan las de la tira que nombran.
+const CAPAS := "res://assets/egipto/acto1/capas/capas.json"
+## El zoom con el que las capas de la tira casan como en la imagen (las lejanas
+## casi no siguen el zoom de la camara) y la camara de referencia (todas
+## alineadas como en la imagen).
+## La camara de referencia de la tira: la de arranque (con ella, las capas se
+## ven exactamente como la imagen de la que salen) y su zoom.
+var TIRA_ZOOM := 0.55
+var TIRA_C0 := Vector2(1500.0, -1100.0)
 const AGUA := preload("res://scripts/game/egipto/fondo_agua.gdshader")
 ## El paralaje se cuenta desde aqui en y (la altura tipica de la camara).
 const REF_Y := -460.0
@@ -91,13 +104,28 @@ var _polvo: CPUParticles2D
 var _x_fin := 0.0
 var _fondo_capas: Array = []     # [CanvasLayer, paralaje x, paralaje y]
 var _barcos: Array = []          # [Sprite2D, reflejo, x0, x1, velocidad, y, fase]
+var _tira_capas: Array = []      # [CanvasLayer, paralaje x, paralaje y]
+var _con_tira := false
+var _arena_delante: CanvasLayer
+## SOLO PLAYA (ver acciones_egipto.gd): sin las piezas del recorrido ni sus
+## cinematicas; la camara con un encuadre fijo.
+var _solo_playa := false
+var _t_juego := 0.0
+## (la imagen entera en pantalla: 1632 filas a la escala de la tira, 1,9)
+## (0.87 con las capas a escala 1.2: el mismo encuadre que 0.55 a 1.9, con el
+## peregrino mas grande frente a la maleza de la playa)
+@export var zoom_playa := 0.87
+## los pies, hacia el 88 % de la pantalla: la arena justa, como en la imagen
+@export var pies_playa := 0.38
 
 func _ready() -> void:
 	nivel = _acciones.nivel
 	process_physics_priority = 20          # despues de las acciones (10): sus limites, y luego los del techo
 	_baston = BASTON.instantiate()
 	_peregrino.add_child(_baston)
-	if x_prueba >= 0.0:
+	if x_prueba >= 0.0 or _acciones.solo_playa:
+		# (en la playa, sin la entrada de cine: con sus bandas negras parecia
+		# que el cielo estaba negro)
 		entrada = false
 	var x0: float = nivel["marcas"]["inicio"] if entrada else nivel["marcas"]["contemplar"]
 	if x_prueba >= 0.0:
@@ -105,12 +133,29 @@ func _ready() -> void:
 	_peregrino.position = Vector2(x0, _acciones.altura_en(x0))
 	_y_ref = _peregrino.position.y
 	_x_fin = float(nivel["losa"]["x0"]) + float(nivel["losa"]["ancho"]) + 400.0
+	_solo_playa = _acciones.solo_playa
+	if _solo_playa:
+		mirador = false
+		# la playa acaba donde acaba la arena de las capas
+		if FileAccess.file_exists(CAPAS):
+			var cap: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CAPAS))
+			if cap.has("fin_suelo"):
+				var fin: float = float(cap["fin_suelo"]) - 500.0
+				_peregrino.limite_derecho = minf(_peregrino.limite_derecho, fin)
+				_acciones.limites_playa.y = minf(_acciones.limites_playa.y, fin)
+		_x_fin = _acciones.limites_playa.y + 600.0
 	# (los datos de movimiento de DarkStage, solo para estudiarlo)
 	$DarkStage/DatosMovimiento.visible = false
 	_fondo()
-	if ResourceLoader.exists(FONDO):
+	_con_tira = ResourceLoader.exists(TIRA)
+	if _con_tira:
+		_montar_tira()
+	elif ResourceLoader.exists(FONDO):
 		_montar_fondo()
-	if ResourceLoader.exists(ARTE):
+	if _solo_playa:
+		boceto = false
+		_luz_y_aire()
+	elif ResourceLoader.exists(ARTE):
 		boceto = false
 		_montar_arte()
 	if boceto:
@@ -118,6 +163,10 @@ func _ready() -> void:
 	_capa_cine()
 	_cam_zoom = _clave(_peregrino.position.x).x
 	_cam_pos = _objetivo_camara()
+	_cam_pos.x = _dentro_del_nivel(_cam_pos.x, _cam_zoom)
+	# (la referencia de las capas: donde arranca la camara)
+	TIRA_C0 = Vector2(_cam_pos.x, _cam_pos.y)
+	TIRA_ZOOM = _cam_zoom
 	_camara.position = _cam_pos
 	_camara.zoom = Vector2(_cam_zoom, _cam_zoom)
 	_camara.position_smoothing_enabled = false
@@ -130,10 +179,14 @@ func _input(event: InputEvent) -> void:
 		_abajo_real = event.is_pressed()
 
 func _physics_process(delta: float) -> void:
-	_techos()
-	_peldanos(delta)
-	_mirador_si_toca()
-	_caidas()
+	_t_juego += delta
+	# (en la playa, nada del recorrido: ni el paso bajo que agacha, ni los
+	# escalones, ni el mirador, ni el temblor al caer; el peregrino, libre)
+	if not _solo_playa:
+		_techos()
+		_peldanos(delta)
+		_mirador_si_toca()
+		_caidas()
 	_mover_camara(delta)
 	_mover_bandas(delta)
 	_mover_sombra()
@@ -170,6 +223,9 @@ func _peldanos(delta: float) -> void:
 
 ## Zoom y altura del encuadre en x (interpolando las claves, suave).
 func _clave(x: float) -> Vector2:
+	if _solo_playa:
+		# (los pies hacia el 82 % de la pantalla: menos arena, mas cielo y fondo)
+		return Vector2(zoom_playa, round(pies_playa * 1632.0 / zoom_playa))
 	var c: Array = nivel["camara"]
 	if c.is_empty():
 		return Vector2(0.7, 380.0)
@@ -192,7 +248,8 @@ func _objetivo_camara() -> Vector2:
 ## Que el encuadre no se salga del nivel por los extremos.
 func _dentro_del_nivel(x: float, zoom: float) -> float:
 	var medio := get_viewport().get_visible_rect().size.x * 0.5 / zoom
-	var izq := -60.0 + medio
+	# (con la tira, el borde izquierdo de sus imagenes: mas alla, negro)
+	var izq := (-800.0 if _con_tira else -60.0) + medio
 	var der := _x_fin - medio
 	if der < izq:
 		return (izq + der) * 0.5
@@ -237,6 +294,15 @@ func _mover_camara(delta: float) -> void:
 	# el fondo: su CanvasLayer con su paralaje, y el zoom amortiguado (lo lejano
 	# casi no se acerca ni se aleja)
 	var centro := get_viewport().get_visible_rect().size * 0.5
+	for f in _tira_capas:
+		var px: float = f[1]
+		var py: float = f[2]
+		var zt := _cam_zoom if px >= 1.0 else lerpf(TIRA_ZOOM, _cam_zoom, px)
+		var cam := _cam_pos + temblor
+		var desp := Vector2(TIRA_C0.x + px * (cam.x - TIRA_C0.x), TIRA_C0.y + py * (cam.y - TIRA_C0.y))
+		# (el cielo se desliza solo, aunque el peregrino este quieto)
+		desp.x -= float(f[3]) * _t_juego
+		f[0].transform = Transform2D(0.0, Vector2(zt, zt), 0.0, centro - desp * zt)
 	for f in _fondo_capas:
 		var sx: float = f[1]
 		var sy: float = f[2]
@@ -278,6 +344,8 @@ func _fin_cinematica() -> void:
 ## ---- el paso bajo --------------------------------------------------------------
 
 const MEDIO_CUERPO := 48.0
+const LUZ_PEREGRINO := Color(1.14, 1.07, 0.97)
+var _luz_peregrino := 1.0
 func _techos() -> void:
 	var p := _peregrino
 	var x: float = p.position.x
@@ -300,8 +368,11 @@ func _techos() -> void:
 				_frenar_cerca(x - x1 - MEDIO_CUERPO)
 	# bajo la viga, en su sombra
 	var sombra := 0.7 if dentro else 1.0
-	var m: float = lerpf(p.modulate.r, sombra, 0.08)
-	p.modulate = Color(m, m, m * 0.97 + 0.03 * sombra)
+	# (y la luz de la escena: el sol calido de la manana, un punto mas de luz
+	# para que no se vea oscuro y pegado sobre la piedra clara)
+	_luz_peregrino = lerpf(_luz_peregrino, sombra, 0.08)
+	var m := _luz_peregrino
+	p.modulate = Color(m * LUZ_PEREGRINO.r, m * LUZ_PEREGRINO.g, m * LUZ_PEREGRINO.b)
 	if dentro:
 		if not Input.is_action_pressed("agacharse"):
 			Input.action_press("agacharse")
@@ -390,7 +461,7 @@ func _hacer_mirador(x: float) -> void:
 	_peregrino.andar_hasta(x + 80.0)
 	_bandas_objetivo = 0.1
 	var p := _peregrino.position
-	_cinematica(Vector2(x + 500.0, p.y - 300.0), 0.62, 0.45)
+	_cinematica(Vector2(x + 600.0, p.y - 420.0), 0.48, 0.45)
 	await _peregrino.llegado
 	await get_tree().create_timer(segundos_mirador).timeout
 	_bandas_objetivo = 0.0
@@ -405,7 +476,7 @@ func _al_intentar_losa() -> void:
 	await get_tree().create_timer(1.4).timeout
 	var l: Dictionary = nivel["losa"]
 	_bandas_objetivo = 0.11
-	_cinematica(Vector2(float(l["x0"]) - 300.0, -float(l["base"]) - float(l["alto"]) * 0.45), 0.6, 0.35)
+	_cinematica(Vector2(float(l["x0"]) - 300.0, -float(l["base"]) - float(l["alto"]) * 0.45), 0.48, 0.35)
 	await get_tree().create_timer(4.5).timeout
 	var tw := create_tween()
 	tw.tween_property(_negro, "modulate:a", 1.0, 3.0)
@@ -417,13 +488,18 @@ func _montar_arte() -> void:
 	var datos: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(ARTE))
 	# (con mipmaps: al abrir el encuadre la piedra no parpadea)
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	for nombre in ["trasera", "detras", "delante", "frente"]:
+	for nombre in ["trasera", "detras", "delante", "frente", "sombra"]:
+		if not datos["paralaje"].has(nombre):
+			continue
 		var n := Node2D.new()
 		n.name = "Capa_" + nombre
 		add_child(n)
 		move_child(n, 0)
 		_capas[nombre] = [n, float(datos["paralaje"][nombre])]
 	for d in datos["sprites"]:
+		# con la tira, sobran la arena repetida y las palmeras de detras
+		if _con_tira and (String(d["tex"]).contains("suelo_arena") or String(d["tex"]).contains("/medio_")):
+			continue
 		var s := Sprite2D.new()
 		s.texture = load(d["tex"])
 		s.centered = false
@@ -446,6 +522,12 @@ func _montar_arte() -> void:
 		if v != 0.0:
 			s.material = _material(v)
 		c[0].add_child(s)
+	# las sombras largas, sobre la arena de delante (por encima de ella)
+	if _capas.has("sombra") and _arena_delante:
+		var cs: Node2D = _capas["sombra"][0]
+		remove_child(cs)
+		_arena_delante.add_child(cs)
+		_capas.erase("sombra")
 	_luz_y_aire()
 
 func _material(v: float) -> ShaderMaterial:
@@ -480,6 +562,157 @@ func _fondo() -> void:
 	capa.add_child(r)
 
 ## ---- el fondo (tools/egipto/fondo.py) -----------------------------------------------
+
+## La tira: cada capa en su CanvasLayer (las de detras por debajo del juego; la
+## arena de delante, por encima: tapa el pie de las piezas), en px de juego.
+func _montar_tira() -> void:
+	var datos: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(TIRA))
+	var lista: Array = []
+	var quita: Array = []
+	if ResourceLoader.exists(CAPAS) or FileAccess.file_exists(CAPAS):
+		var otras: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(CAPAS))
+		quita = otras.get("quita", [])
+		for c in otras["capas"]:
+			lista.append([c, otras])
+	for c in datos["capas"]:
+		if not (String(c["nombre"]) in quita):
+			lista.append([c, datos])
+	var k := 0
+	for par in lista:
+		var c: Dictionary = par[0]
+		datos = par[1]
+		var e: float = datos["escala"]
+		var capa := CanvasLayer.new()
+		capa.layer = 1 if c.get("delante", false) else -90 + k
+		if c.get("delante", false):
+			_arena_delante = capa
+		capa.name = "Tira_" + String(c["nombre"])
+		add_child(capa)
+		var agua_mat: ShaderMaterial = null
+		if c.has("agua"):
+			agua_mat = ShaderMaterial.new()
+			agua_mat.shader = AGUA
+			agua_mat.set_shader_parameter("desde", float(c["agua"][0]))
+			agua_mat.set_shader_parameter("hasta", float(c["agua"][1]))
+			agua_mat.set_shader_parameter("ruido", _ruido_rachas())
+		for tr in c["trozos"]:
+			var s := Sprite2D.new()
+			s.texture = load(tr["tex"])
+			if agua_mat:
+				s.material = agua_mat
+			s.centered = false
+			var ec: float = c.get("escala", e)
+			s.scale = Vector2(ec, ec)
+			s.position = Vector2(tr["x"], tr["y"])
+			s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+			capa.add_child(s)
+		_tira_capas.append([capa, float(c["p"]), float(c["py"]), float(c.get("deriva", 0.0))])
+		if c.has("costa") and not c["trozos"].is_empty():
+			_calima(capa, c, float(datos["x0"]), float(datos["ancho"]) * float(c.get("escala", e)) / e)
+		# los barcos, en su capa, justo delante de la que dice capas.json
+		if datos.has("barcos") and String(datos["barcos"].get("tras", "")) == String(c["nombre"]):
+			var bd: Dictionary = datos["barcos"]
+			var cb := CanvasLayer.new()
+			cb.layer = capa.layer
+			cb.name = "Tira_barcos"
+			add_child(cb)
+			_tira_capas.append([cb, float(bd["p"]), float(bd["py"]), 0.0])
+			_barcos_tira(cb, float(bd["x0"]), float(bd["x1"]), float(bd["y0"]), float(bd["y1"]), 0.0, 1.0)
+		if c.has("agua") and not c["trozos"].is_empty() and not datos.has("barcos"):
+			# la franja del agua en el juego (coordenadas de la capa)
+			var tr0: Dictionary = c["trozos"][0]
+			var ec: float = c.get("escala", e)
+			var alto: float = (load(tr0["tex"]) as Texture2D).get_height() * ec
+			var y0: float = float(tr0["y"]) + float(c["agua"][0]) * alto
+			var y1: float = float(tr0["y"]) + float(c["agua"][1]) * alto
+			var x1: float = float(datos["x0"]) + float(datos["ancho"]) * ec / e
+			_barcos_tira(capa, float(datos["x0"]), x1, y0, y1)
+		k += 1
+
+## El ruido de las rachas de viento del agua (estirado en el shader).
+func _ruido_rachas() -> NoiseTexture2D:
+	var n := FastNoiseLite.new()
+	n.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	n.frequency = 0.012
+	n.fractal_octaves = 3
+	var tex := NoiseTexture2D.new()
+	tex.noise = n
+	tex.width = 512
+	tex.height = 512
+	tex.seamless = true
+	return tex
+
+## LA CALIMA: una franja de luz suave sobre la base de la ciudad, en la otra
+## orilla, que la separa del agua y la aleja (es lo que da profundidad a lo
+## lejano), por debajo de los barcos. Cada capa puede traer la suya (capas.json:
+## "calima" y "calima_alto"; la de la orilla de enfrente, mas suave).
+@export var calima := 0.22
+func _calima(capa: CanvasLayer, c: Dictionary, x0: float, ancho: float) -> void:
+	var tr0: Dictionary = c["trozos"][0]
+	var ec: float = c["escala"]
+	var alto: float = (load(tr0["tex"]) as Texture2D).get_height() * ec
+	var y_costa: float = float(tr0["y"]) + float(c["costa"]) * alto
+	var fuerza: float = float(c.get("calima", calima))
+	var g := Gradient.new()
+	# (los extremos antes del punto de en medio: add_point cambia los indices)
+	g.set_color(0, Color(1.0, 0.93, 0.8, 0.0))
+	g.set_color(1, Color(1.0, 0.93, 0.8, 0.0))
+	g.add_point(0.75, Color(1.0, 0.93, 0.8, fuerza))
+	var tex := GradientTexture2D.new()
+	tex.gradient = g
+	tex.fill_from = Vector2(0, 0)
+	tex.fill_to = Vector2(0, 1)
+	tex.width = 4
+	tex.height = 128
+	var s := Sprite2D.new()
+	s.texture = tex
+	s.centered = false
+	var h: float = float(c.get("calima_alto", 360.0))
+	s.position = Vector2(x0, y_costa - h * 0.75)
+	s.scale = Vector2(ancho / 4.0, h / 128.0)
+	capa.add_child(s)
+
+## Los faluchos por el agua de la tira: cuanto mas cerca (mas abajo en la franja
+## del agua), mas grandes y mas deprisa; con su reflejo y cabeceando.
+const BARCOS_TEX := ["res://assets/egipto/acto1/barcos/barco_0.png",
+		"res://assets/egipto/acto1/barcos/barco_1.png",
+		"res://assets/egipto/acto1/barcos/barco_2.png",
+		"res://assets/egipto/acto1/barcos/barco_3.png"]
+@export var barcos_cuantos := 7
+func _barcos_tira(capa: CanvasLayer, x0: float, x1: float, y0: float, y1: float, prof0 := 0.12, prof1 := 0.6) -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 41
+	var texs: Array = []
+	for r in BARCOS_TEX:
+		if ResourceLoader.exists(r):
+			texs.append(load(r))
+	if texs.is_empty():
+		return
+	for i in barcos_cuantos:
+		var tex: Texture2D = texs[i % texs.size()]
+		var prof := rng.randf_range(prof0, prof1)            # 0 la otra orilla, 1 la cercana
+		var y := lerpf(y0, y1, prof)
+		var alto_obj := lerpf(110.0, 230.0, prof)             # alto del barco en el juego
+		var esc := alto_obj / tex.get_height()
+		var s := Sprite2D.new()
+		s.texture = tex
+		s.centered = false
+		s.offset = Vector2(-tex.get_width() * 0.5, -tex.get_height())
+		s.scale = Vector2(esc, esc)
+		s.modulate = Color(1.0, 0.95, 0.86, 0.95)
+		var r := Sprite2D.new()
+		r.texture = tex
+		r.centered = false
+		r.offset = Vector2(-tex.get_width() * 0.5, 0.0)
+		r.flip_v = true
+		r.scale = Vector2(esc, esc * 0.7)
+		r.modulate = Color(0.85, 0.9, 1.0, 0.25)
+		capa.add_child(r)
+		capa.add_child(s)
+		var v := lerpf(8.0, 26.0, prof) * (1.0 if rng.randf() < 0.5 else -1.0)
+		s.flip_h = v < 0.0
+		r.flip_h = s.flip_h
+		_barcos.append([s, r, x0 + 400.0, x1 - 400.0, v, y, rng.randf() * TAU, rng.randf_range(x0 + 400.0, x1 - 400.0)])
 
 ## Donde empieza (x) la tira de cada capa del fondo, en sus coordenadas.
 const FONDO_X0 := -1600.0
@@ -606,9 +839,9 @@ func _luz_y_aire() -> void:
 	_polvo.scale_amount_max = 3.5
 	var gp := Gradient.new()
 	gp.set_color(0, Color(1.0, 0.92, 0.75, 0.0))
+	gp.set_color(1, Color(1.0, 0.92, 0.75, 0.0))
 	gp.add_point(0.3, Color(1.0, 0.92, 0.75, 0.4))
 	gp.add_point(0.7, Color(1.0, 0.92, 0.75, 0.4))
-	gp.set_color(1, Color(1.0, 0.92, 0.75, 0.0))
 	_polvo.color_ramp = gp
 	_polvo.z_index = 25
 	add_child(_polvo)
@@ -622,7 +855,7 @@ func _mover_sombra() -> void:
 	var pies: float = p.position.y + p.get_node("Sprite").position.y
 	var alto := clampf((suelo - pies) / 350.0, 0.0, 1.0)
 	_sombra.position = Vector2(p.position.x, suelo - 4.0)
-	_sombra.modulate.a = (1.0 - alto) * p.modulate.r
+	_sombra.modulate.a = (1.0 - alto) * _luz_peregrino
 	var e := 1.5 * (1.0 - 0.4 * alto)
 	_sombra.scale = Vector2(e, 0.22 * (1.0 - 0.4 * alto))
 	_sombra.visible = _estado() != "TUMBADO"

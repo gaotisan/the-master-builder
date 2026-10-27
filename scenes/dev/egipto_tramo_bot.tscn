@@ -8,6 +8,7 @@ x_prueba = 9505.0
 mirador = false
 
 [node name="Acciones" parent="." index="2"]
+solo_playa = false
 prueba_bloques = {}
 
 [node name="Bot" type="Node" parent="."]

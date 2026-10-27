@@ -11,6 +11,8 @@ extends Node
 @export var tiempos: Array = []
 
 func _ready() -> void:
+	# (sin la pausa al perder el foco: la ventana de las fotos no lo tiene)
+	add_to_group(&"sin_pausa")
 	DirAccess.make_dir_recursive_absolute(carpeta)
 	if not tiempos.is_empty():
 		var antes := 0.0

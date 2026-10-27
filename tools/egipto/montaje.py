@@ -21,6 +21,9 @@ import sys
 import cv2
 import numpy as np
 
+sys.path.insert(0, os.path.dirname(os.path.realpath(__file__)))
+from grado import graduar  # noqa: E402
+
 AQUI = os.path.dirname(os.path.realpath(__file__))
 FRANJAS = os.path.join(AQUI, "_kit", "franjas")
 PROYECTO = os.path.dirname(os.path.dirname(AQUI))
@@ -32,7 +35,7 @@ RES = "res://assets/egipto/acto1/"
 ESCALA = 0.77
 SOLAPE = 60             # lo que se solapan (fundidas) dos piezas seguidas
 PLANTA = 6.5            # los pies pintan 6,5 px por encima del nodo (acciones_perfil.gd)
-FONDO_DEBAJO = 900      # lo que se alarga hacia abajo cada franja (su pie, repetido y en sombra)
+FONDO_DEBAJO = 1400     # lo que se alarga hacia abajo cada franja (su pie, repetido y en sombra)
 
 _cache = {}
 REFS = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))),
@@ -98,7 +101,7 @@ PIEZAS = [
     #    izquierda (se llega por encima); tirar, pasar por encima, empujar dos
     #    veces hasta la estructura alta: 183 + 226 + 2 x 201,77 + 1 = 813,5
     {"f": 18, "rec": (600, 1180, 1000, 1632), "ancla": 1035, "h": 0, "pisa": [[0, 580, 1035]], "nombre": "patio_0"},
-    {"f": 19, "rec": (547, 1180, 1100, 1632), "ancla": 1202, "h": 0, "pisa": [[0, 633, 1202]], "nombre": "patio_1"},
+    {"f": 18, "rec": (60, 693, 1000, 1632), "ancla": 1035, "h": 0, "pisa": [[0, 633, 1035]], "nombre": "patio_1"},
     # 7. TREPAR CON LO COLOCADO: la estructura alta de r17 (639 sobre el camino)
     {"f": 17, "rec": (2317, 2912, 520, 1632), "ancla": 1376, "h": 0, "pisa": "perfil", "nombre": "estructura_alta"},
     # 8. HACIA LA CANTERA: r19 (de su muro de la izquierda en adelante)
@@ -106,7 +109,7 @@ PIEZAS = [
     # 9. EL FOSO: 360 px (salto corriendo, a tiempo)
     {"hueco": 360, "fondo_h": 140, "nombre": "foso"},
     # 10. r20 hasta el final
-    {"f": 20, "rec": (0, 2912, 700, 1632), "ancla": 1205, "h": 446, "pisa": "perfil", "nombre": "final"},
+    {"f": 20, "rec": (0, 2912, 520, 1632), "ancla": 1205, "h": 446, "pisa": "perfil", "nombre": "final"},
 ]
 
 # Los objetos que se mueven y la losa, recortados de las franjas
@@ -124,9 +127,33 @@ def poner(tex, x, y, capa="detras", z=-10, flip=False, escala=1.0, tinte=None, v
                     "ancla": ancla})
 
 
+def limpiar_borde(rgba):
+    """El borde de un recorte sin halo del fondo original: el color de los
+    pixeles semitransparentes se cambia por el del interior mas cercano (lo
+    opaco, corrido hacia fuera), y el alfa se cierra medio pixel."""
+    if rgba.shape[2] < 4:
+        return rgba
+    a = rgba[..., 3].astype(np.float32) / 255.0
+    if a.min() > 0.99:
+        return rgba
+    dentro = (a > 0.92).astype(np.float32)
+    c = rgba[..., :3].astype(np.float32)
+    num = cv2.GaussianBlur(c * dentro[..., None], (0, 0), 2.5)
+    den = cv2.GaussianBlur(dentro, (0, 0), 2.5)[..., None]
+    interior = np.where(den > 1e-3, num / np.maximum(den, 1e-3), c)
+    borde = ((a > 0.0) & (a <= 0.92))[..., None]
+    c = np.where(borde, interior, c)
+    a = np.clip((a - 0.08) / 0.92, 0, 1)
+    return np.dstack([np.clip(c, 0, 255).astype(np.uint8), (a * 255).astype(np.uint8)])
+
+
 def guardar(ruta, rgba):
+    """Guarda una textura ya con el color del acto (grado.py), con el borde
+    limpio: las de la trasera con algo de bruma, el resto como primer plano."""
     os.makedirs(os.path.dirname(ruta), exist_ok=True)
-    cv2.imencode(".png", rgba)[1].tofile(ruta)
+    nombre = os.path.basename(ruta)
+    plano = "trasera" if nombre.startswith("medio_") else "primer"
+    cv2.imencode(".png", graduar(limpiar_borde(rgba), plano))[1].tofile(ruta)
 
 
 def recorte(f, rec, flip=False):
@@ -164,23 +191,29 @@ def con_pie_de(im, alto_extra, fuente):
 
 
 def con_pie(im, alto_extra):
-    """Alarga una pieza hacia abajo con su propio pie: la franja de abajo (las
-    plantas del pie del muro) repetida, volteada en horizontal una si y otra no
-    (sin espejo vertical: parecia un reflejo en el agua), y fundida a negro."""
+    """Alarga una pieza hacia abajo lo justo (alto_extra) con su propio pie:
+    la franja de abajo, cada vez corrida en horizontal y volteada una si y otra
+    no, para que no se vea la repeticion; en penumbra suave. Lo de mas abajo lo
+    tapa la arena de delante."""
     h, w = im.shape[:2]
+    if alto_extra <= 0:
+        return im
     banda = im[max(0, h - 160):].copy()
     out = np.zeros((h + alto_extra, w, 4), np.uint8)
     out[:h] = im
     y = h
     k = 0
+    rng = np.random.default_rng(h * 7 + w)
     while y < h + alto_extra:
-        t = banda[:, ::-1] if k % 2 == 0 else banda
-        n = min(t.shape[0], h + alto_extra - y)
-        out[y:y + n] = t[:n]
+        t_ = np.roll(banda, int(rng.integers(w // 5, w // 2)), axis=1)
+        if k % 2 == 0:
+            t_ = t_[:, ::-1]
+        n = min(t_.shape[0], h + alto_extra - y)
+        out[y:y + n] = t_[:n]
         out[y:y + n, :, 3] = 255
         y += n
         k += 1
-    sombra = 0.6 * np.clip((np.arange(h + alto_extra) - h + 40) / 420.0, 0, 1.0)[:, None] ** 0.7
+    sombra = 0.3 * np.clip((np.arange(h + alto_extra) - h + 40) / 300.0, 0, 1.0)[:, None] ** 0.7
     out[..., :3] = (out[..., :3] * (1 - sombra[..., None])).astype(np.uint8)
     return out
 
@@ -244,7 +277,10 @@ def montar():
                            "suelo_h": float(p["h"]), "nombre": "paso_bajo"})
         im = recorte(p["f"], p["rec"], p.get("flip", False))
         ims = escalar(im)
-        ims = con_pie_de(ims, FONDO_DEBAJO, p["pie_de"]) if "pie_de" in p else con_pie(ims, FONDO_DEBAJO)
+        # el pie, lo justo hasta algo por debajo de donde empieza la arena de delante (y = 35)
+        y_rec0 = -p["h"] - (p["ancla"] - p["rec"][2]) * ESCALA - PLANTA
+        falta = int(max(0, 110 - (y_rec0 + ims.shape[0])))
+        ims = con_pie_de(ims, falta, p["pie_de"]) if "pie_de" in p else con_pie(ims, falta)
         w = ims.shape[1]
         # COSTURAS: si va pegada a otra pieza, la solapa SOLAPE px y se funde en ella
         if pegada:
@@ -360,11 +396,28 @@ def comprobar(tramos, techos):
     return malos
 
 
+# el pilar de r20 (cajas en la imagen: y desde, x0, x1): el capitel, el fuste y la base
+PILAR_R20 = (207, 445, 953, 1390, [(953, 207, 445), (1040, 222, 416), (1290, 215, 404)])
+
+
+def pilar_r20():
+    x0, x1, y0, y1, bandas = PILAR_R20
+    im = recorte(20, (x0, x1, y0, y1))
+    m = np.zeros(im.shape[:2], np.float32)
+    for k, (yd, a0, a1) in enumerate(bandas):
+        yh = bandas[k + 1][0] if k + 1 < len(bandas) else y1
+        m[yd - y0:yh - y0, a0 - x0:a1 - x0] = 1.0
+    m = cv2.GaussianBlur(m, (0, 0), 0.8)
+    im[..., 3] = (np.minimum(im[..., 3] / 255.0, m) * 255).astype(np.uint8)
+    return escalar(im)
+
+
 def objetos():
     os.makedirs(OBJ, exist_ok=True)
     tam = {}
     for n, o in OBJETOS.items():
-        im = escalar(recorte(o["f"], o["rec"]))
+        im = pilar_r20() if n == "sillar_argolla" else escalar(recorte(o["f"], o["rec"]))
+        im = limpiar_borde(im)
         guardar(os.path.join(OBJ, n + ".png"), im)
         tam[n] = (im.shape[1], im.shape[0])
     return tam
@@ -375,14 +428,15 @@ def paso_bajo(techo):
     viga, sobre dos pilares de r21 cortados a la altura libre."""
     x0, x1, libre = techo["x0"], techo["x1"], techo["libre"]
     y_suelo = -techo.get("suelo_h", 0.0) - PLANTA
-    viga = escalar(recorte(18, (1180, 1900, 1018, 1190)))
+    viga = escalar(recorte(18, (1380, 1800, 1030, 1150)))
+    viga[..., 3] = 255
     vw, vh = viga.shape[1], viga.shape[0]
     # que cubra el paso y apoye en los pilares
     largo = int(x1 - x0 + 160)
     if vw < largo:
         viga = cv2.resize(viga, (largo, vh), interpolation=cv2.INTER_AREA)
     guardar(os.path.join(TEX, "viga_paso.png"), viga)
-    pilar = escalar(recorte(20, (207, 445, 953, 1390)))
+    pilar = pilar_r20()
     # cortado a la altura libre (desde abajo)
     ph = int(libre + PLANTA)
     pilar = pilar[max(0, pilar.shape[0] - ph):]
@@ -392,9 +446,11 @@ def paso_bajo(techo):
     poner("pilar_paso", x1 - 30, y_suelo - pilar.shape[0] + 6, z=-9, flip=True)
     poner("viga_paso", x0 - 80, y_suelo - libre - vh + 4, z=-8)
     # lo de dentro del paso: la sombra bajo el puente de r19 (verdes oscuros)
-    dentro = original(19, (600, 890, 1340, 1560))
+    # lo de dentro: la pared de detras (paramento de r18) en sombra
+    dentro = escalar(recorte(18, (60, 820, 1060, 1240)))
+    dentro[..., 3] = 255
     dentro = cv2.resize(dentro, (int(x1 - x0 + 40), int(libre + 10)), interpolation=cv2.INTER_AREA)
-    dentro[..., :3] = (dentro[..., :3] * 0.42).astype(np.uint8)
+    dentro[..., :3] = (dentro[..., :3] * 0.5).astype(np.uint8)
     dentro = fundir_bordes(dentro, (True, True, True, False), 50)
     guardar(os.path.join(TEX, "dentro_paso.png"), dentro)
     poner("dentro_paso", x0 - 20, y_suelo - libre - 6, z=-11)
@@ -476,15 +532,15 @@ def plano_medio(tramos, x_fin, rng):
         k = rng.uniform(1.05, 1.2)
         poner(n, x, base + 60, capa="trasera", z=-30, flip=bool(rng.random() < 0.5), escala=e,
               tinte=[k, k, k * 0.96, 1.0], viento=0.2, ancla="base")
-        if rng.random() < 0.45:
+        if rng.random() < 0.0:
             n2, w2, h2 = texs[int(rng.integers(len(texs)))]
             poner(n2, x + rng.uniform(140, 320), base + rng.uniform(-30, 60), capa="trasera", z=-31,
                   flip=bool(rng.random() < 0.5), escala=e * rng.uniform(0.7, 0.9),
                   tinte=[k * 0.85, k * 0.85, k * 0.82, 1.0], viento=0.2, ancla="base")
-        x += rng.uniform(650, 1350)
+        x += rng.uniform(1500, 2600)
 
 
-def primer_termino(x_fin, rng, tramos):
+def primer_termino(x_fin, rng, tramos, juntas):
     """Vegetacion oscura que pasa por delante, abajo: las plantas (solo lo
     verde) del pie de las franjas 17, 18 y 20, mas grandes y en sombra, con
     paralaje."""
@@ -509,54 +565,193 @@ def primer_termino(x_fin, rng, tramos):
         # y que se funda hacia abajo con lo de debajo (se alarga en sombra)
         im[..., 3] = np.clip(a, 0, 255).astype(np.uint8)
         im = escalar(im)
-        n = "frente_%d" % k
-        guardar(os.path.join(TEX, n + ".png"), im)
-        texs.append((n, im.shape[1], im.shape[0]))
+        # desenfocadas (estan mas cerca que el foco): en premultiplicado
+        f = im.astype(np.float32)
+        al = f[..., 3:4] / 255.0
+        pm = cv2.GaussianBlur(f[..., :3] * al, (0, 0), 3.0)
+        al2 = cv2.GaussianBlur(al, (0, 0), 3.0)[..., None]
+        f[..., :3] = np.where(al2 > 1e-3, pm / np.maximum(al2, 1e-3), 0)
+        f[..., 3:4] = al2 * 255
+        im = np.clip(f, 0, 255).astype(np.uint8)
+        # MATAS: de la tira, solo las tres zonas mas densas (420 px), sueltas y
+        # fundidas a los lados: pocas matas concentradas, no una alfombra
+        dens = cv2.blur(im[..., 3].astype(np.float32).mean(0).reshape(1, -1), (151, 1)).ravel()
+        for j in range(3):
+            c = int(np.argmax(dens))
+            x0, x1 = max(0, c - 210), min(im.shape[1], c + 210)
+            mata = im[:, x0:x1].copy()
+            r = np.ones(x1 - x0, np.float32)
+            r[:80] = np.linspace(0, 1, 80)[:x1 - x0][:80] if x1 - x0 >= 80 else 1
+            r[-80:] = np.minimum(r[-80:], np.linspace(1, 0, 80))
+            mata[..., 3] = (mata[..., 3] * r[None, :]).astype(np.uint8)
+            n = "mata_%d_%d" % (k, j)
+            guardar(os.path.join(TEX, n + ".png"), mata)
+            texs.append((n, mata.shape[1], mata.shape[0]))
+            dens[max(0, c - 420):c + 420] = 0
+
     def alto_en(x):
         for t in tramos:
             if t[0] <= x < t[1]:
                 return t[2]
         return tramos[-1][2] if x >= tramos[-1][1] else tramos[0][2]
 
-    x = 2100.0                  # (en la explanada de la llegada, nada: se ve la arena)
-    while x < x_fin + 600:
+    # una mata en cada union entre piezas (tapa la costura) y nada mas
+    for x in juntas:
         n, w, h = texs[int(rng.integers(len(texs)))]
-        e = rng.uniform(1.5, 1.9)
-        k = rng.uniform(0.22, 0.32)
-        # sigue el terreno (lo mas bajo de alrededor): siempre tapa el pie de lo que hay
-        suelo = min(alto_en(x + d) for d in (-300, 0, 300, 600))
-        # la copa, siempre por debajo de lo que se pisa
-        poner(n, x, -suelo + h * e + rng.uniform(40, 130), capa="frente", z=30, flip=bool(rng.random() < 0.5), escala=e,
-              tinte=[k, k * 1.08, k * 0.95, 1.0], ancla="base")
-        x += w * e * rng.uniform(0.55, 0.8)
+        e = rng.uniform(1.4, 1.7)
+        k = rng.uniform(0.55, 0.65)
+        suelo = min(alto_en(x + d) for d in (-250, 0, 250))
+        poner(n, x, -suelo + h * e + rng.uniform(20, 90), capa="frente", z=30, flip=bool(rng.random() < 0.5),
+              escala=e, tinte=[k, k * 1.02, k * 1.08, 1.0], ancla="base")
+
+
+SOMBRA_A = 1.15     # cuanto se corre a la izquierda la sombra por px de alto (el sol, detras a la derecha)
+SOMBRA_B = 0.16     # cuanto baja (hacia el espectador) por px de alto
+
+
+def sombras():
+    """Sombra larga de cada pieza sobre la arena de delante, como las de la
+    tira (hacia la izquierda y hacia delante): la silueta de la pieza
+    proyectada en el suelo, suave y algo calida. Van en la capa de la arena de
+    delante (por encima de ella, por debajo de nada que se juegue)."""
+    nuevos = []
+    for s in sprites:
+        n = os.path.basename(s["tex"])
+        if not (n.startswith("pieza_") or n.startswith("pilar_paso")) or s["capa"] != "detras":
+            continue
+        im = cv2.imdecode(np.fromfile(os.path.join(TEX, n), np.uint8), cv2.IMREAD_UNCHANGED)
+        if s["flip"]:
+            im = im[:, ::-1]
+        a = im[..., 3].astype(np.float32) / 255.0
+        h, w = a.shape
+        y_top = s["y"]                         # y del juego de la fila 0
+        # solo lo que esta por encima del suelo (y < 0)
+        filas = int(np.clip(-y_top, 0, h))
+        if filas < 10:
+            continue
+        sil = a[:filas]
+        alto = filas
+        W2 = int(w + SOMBRA_A * alto) + 4
+        H2 = int(SOMBRA_B * alto) + 4
+        # cada fila a altura hh sobre el suelo va a (x - A*hh, B*hh)
+        src_y = np.arange(filas)
+        hh = (filas - src_y).astype(np.float32)
+        M = np.float32([[1, -SOMBRA_A / SOMBRA_B * 0 + 0, SOMBRA_A * alto], [0, 1, 0]])
+        out = np.zeros((H2, W2), np.float32)
+        for yy in range(filas):
+            fila = sil[yy]
+            if fila.max() < 0.05:
+                continue
+            dy = int(SOMBRA_B * hh[yy])
+            dx = int(SOMBRA_A * alto - SOMBRA_A * hh[yy])
+            out[dy, dx:dx + w] = np.maximum(out[dy, dx:dx + w], fila)
+        out = cv2.dilate(out, np.ones((3, 1), np.uint8))
+        out = cv2.GaussianBlur(out, (0, 0), 5)
+        rgba = np.zeros((H2, W2, 4), np.uint8)
+        rgba[..., 0], rgba[..., 1], rgba[..., 2] = 40, 52, 70           # BGR: calida oscura
+        rgba[..., 3] = np.clip(out * 0.36 * 255, 0, 255).astype(np.uint8)
+        nombre = "sombra_" + n[:-4] + ("_f" if s["flip"] else "")
+        cv2.imencode(".png", rgba)[1].tofile(os.path.join(TEX, nombre + ".png"))
+        nuevos.append({"tex": RES + "tex/" + nombre + ".png", "x": round(s["x"] - SOMBRA_A * alto, 1),
+                       "y": -PLANTA, "capa": "sombra", "z": 0, "flip": False, "escala": 1.0, "viento": 0.0,
+                       "tinte": None, "ancla": "arriba_izq"})
+    sprites.extend(nuevos)
 
 
 PASO = [0.0, 0.0]
+
+
+def suelo_arena(x_fin, rng):
+    """El suelo de delante: la arena iluminada con sombras largas de la imagen de
+    estilo 1 (la explanada), por debajo de lo mas bajo que se pisa, a lo largo de
+    todo el nivel. Cosida con ventanas tomadas al azar y fundidas (sin espejos:
+    hacian rombos), y hacia abajo la misma arena estirada y suave. Tapa el pie
+    de las piezas: abajo no hay negro."""
+    im = cv2.imdecode(np.fromfile(os.path.join(REFS, "estilo_1.png"), np.uint8), cv2.IMREAD_COLOR)
+    src = im[712:816, 0:1200]
+    e = 2 * ESCALA
+    src = cv2.resize(src, None, fx=e, fy=e, interpolation=cv2.INTER_CUBIC).astype(np.float32)
+    hs, ws = src.shape[:2]
+    VENT, SOL = 900, 300
+    ancho = int(x_fin + 2400)
+
+    def banda():
+        tira = np.zeros((hs, ancho, 3), np.float32)
+        peso = np.zeros((1, ancho, 1), np.float32)
+        x = 0
+        while x < ancho:
+            s0 = int(rng.integers(0, ws - VENT))
+            trozo = src[:, s0:s0 + VENT]
+            r = np.ones(VENT, np.float32)
+            r[:SOL] = np.linspace(0, 1, SOL)
+            r[-SOL:] = np.linspace(1, 0, SOL)
+            n = min(VENT, ancho - x)
+            tira[:, x:x + n] += trozo[:, :n] * r[None, :n, None]
+            peso[:, x:x + n] += r[None, :n, None]
+            x += VENT - SOL
+        return tira / np.maximum(peso, 1e-3)
+
+    # cuatro bandas de arena real (sombras largas), cada una algo mas en sombra,
+    # fundidas entre si: el suelo sigue hacia el espectador
+    bandas = []
+    for k in range(4):
+        bd = banda() * (1.0 - 0.07 * k)
+        bandas.append(bd)
+    tira = bandas[0]
+    for bd in bandas[1:]:
+        f = 40
+        rr = np.linspace(0, 1, f)[:, None, None]
+        union = tira[-f:] * (1 - rr) + bd[:f] * rr
+        tira = np.vstack([tira[:-f], union, bd[f:]])
+    peso = np.ones((1, ancho, 1), np.float32)
+    # hacia abajo: la ultima franja estirada, difuminada en vertical y algo en sombra
+    # (el color medio de lo de abajo de la arena, muy suave a lo ancho: sin rayas)
+    col = tira[-30:].mean(0)
+    col = cv2.GaussianBlur(col.reshape(1, -1, 3), (0, 0), sigmaX=250, sigmaY=0).reshape(-1, 3)
+    y = np.linspace(0, 1, 900)[:, None, None]
+    abajo = col[None, :, :] * (1 - 0.16 * y) * np.array([0.9, 1.0, 1.1], np.float32)   # BGR: algo mas calido
+    # fundido con la arena de encima
+    f = 60
+    rr = np.linspace(0, 1, f)[:, None, None]
+    tira[-f:] = tira[-f:] * (1 - rr) + col[None, :, :] * rr
+    tira = np.vstack([tira, abajo])
+    tira = np.dstack([np.clip(tira, 0, 255).astype(np.uint8), np.full(tira.shape[:2], 255, np.uint8)])
+    r = np.clip(np.arange(tira.shape[0]) / 24.0, 0, 1)[:, None]
+    tira[..., 3] = (tira[..., 3] * r).astype(np.uint8)
+    # graduada entera (si no, cada trozo salia de un color) y en trozos de 2048
+    # sin volver a graduar
+    tira = graduar(tira, "suelo")
+    x0 = -900
+    for k, c in enumerate(range(0, ancho, 2048)):
+        cv2.imencode(".png", tira[:, c:c + 2048])[1].tofile(os.path.join(TEX, "suelo_arena_%d.png" % k))
+        poner("suelo_arena_%d" % k, x0 + c, 70.0, capa="delante", z=6)
 
 
 def camara(zonas):
     """Los encuadres por tramo: [x, zoom, alto del encuadre sobre los pies]."""
     z = zonas
     c = [
-        [0, 0.86, 260],                                    # la llegada: algo abierto
-        [900, 0.98, 200],
-        [z["zanja"][0] - 300, 0.94, 200],
-        [z["muro_largo"][0] + 400, 0.9, 200],              # correr: algo mas abierto
-        [PASO[0] - 400, 0.98, 190],
-        [PASO[0] + 60, 1.1, 150],                          # el paso bajo: cerrado
-        [PASO[1] - 60, 1.1, 150],
-        [PASO[1] + 400, 0.96, 200],
-        [z["escaleras"][0] + 300, 1.0, 210],
-        [z["bloques"][0] + 300, 1.0, 240],                 # los bloques que suben
-        [z["bloques"][1] - 100, 0.96, 240],
-        [z["patio_0"][0] - 200, 0.98, 240],                # el patio
-        [z["patio_1"][1] - 100, 0.88, 320],                # la estructura alta: hay que ver arriba
-        [z["estructura_alta"][0] + 250, 0.78, 300],        # el mirador
-        [z["ruinas"][0] + 300, 0.96, 220],
-        [z["foso"][0] - 200, 0.9, 200],
-        [z["final"][0] + 300, 0.96, 220],
-        [z["final"][1] - 700, 0.8, 340],                   # la losa
+        [0, 0.64],                                         # la llegada: abierto
+        [900, 0.7],
+        [z["zanja"][0] - 300, 0.68],
+        [z["muro_largo"][0] + 400, 0.64],                  # correr: algo mas abierto
+        [PASO[0] - 400, 0.7],
+        [PASO[0] + 60, 0.8],                               # el paso bajo: algo cerrado
+        [PASO[1] - 60, 0.8],
+        [PASO[1] + 400, 0.68],
+        [z["escaleras"][0] + 300, 0.7],
+        [z["bloques"][0] + 300, 0.7],                      # los bloques que suben
+        [z["bloques"][1] - 100, 0.68],
+        [z["patio_0"][0] - 200, 0.7],                      # el patio
+        [z["patio_1"][1] - 100, 0.64],                     # la estructura alta: hay que ver arriba
+        [z["estructura_alta"][0] + 250, 0.56],             # el mirador
+        [z["ruinas"][0] + 300, 0.68],
+        [z["foso"][0] - 200, 0.64],
+        [z["final"][0] + 300, 0.68],
+        [z["final"][1] - 700, 0.58],                       # la losa
     ]
+    # el encuadre: los pies hacia el 72 % de la pantalla
+    c = [[x, zz, round(0.22 * 1632 / zz)] for x, zz in c]
     return c
 
 
@@ -610,9 +805,18 @@ def main():
     }
     rng = np.random.default_rng(1981)
     plano_medio(tramos, x_fin, rng)
-    primer_termino(x_fin, rng, tramos)
+    # las uniones entre piezas pegadas (no los bordes de los huecos)
+    huecos = [zonas[q["nombre"]] for q in PIEZAS if "hueco" in q]
+    juntas = sorted({v[0] for k_, v in zonas.items() if v[0] > 2100}
+                    - {h[1] for h in huecos} - {h[0] for h in huecos})
+    juntas = [j for j in juntas if all(abs(j - h[0]) > 100 and abs(j - h[1]) > 100 for h in huecos)]
+    # (las matas del primer termino, quitadas por ahora: sobre la arena parecian
+    # hojas sueltas, y habia demasiada vegetacion; primer_termino() sigue aqui)
+    suelo_arena(x_fin, rng)
+    sombras()
     json.dump(datos, open(os.path.join(DESTINO, "nivel.json"), "w", encoding="utf-8"), indent=1)
-    json.dump({"paralaje": {"trasera": 0.93, "detras": 1.0, "delante": 1.0, "frente": 1.18}, "sprites": sprites},
+    json.dump({"paralaje": {"trasera": 0.93, "detras": 1.0, "delante": 1.0, "frente": 1.18, "sombra": 1.0},
+               "sprites": sprites},
               open(os.path.join(DESTINO, "arte.json"), "w", encoding="utf-8"), indent=0)
     print("largo %.0f, tramos %d, sprites %d" % (x_fin, len(terreno), len(sprites)))
     for k, v in zonas.items():

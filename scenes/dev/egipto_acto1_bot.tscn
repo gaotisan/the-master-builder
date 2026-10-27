@@ -5,6 +5,9 @@
 
 [node name="EgiptoActo1Bot" instance=ExtResource("1")]
 
+[node name="Acciones" parent="." index="2"]
+solo_playa = false
+
 [node name="Bot" type="Node" parent="."]
 script = ExtResource("2")
 traza = 1.0

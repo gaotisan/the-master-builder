@@ -11,7 +11,10 @@ uniform bool agua = false;          // el agua: brillos que corren, sin mecerse
 
 varying float fase;
 
+varying vec4 tinte;
+
 void vertex() {
+	tinte = COLOR;
 	vec2 mundo = (MODEL_MATRIX * vec4(0.0, 0.0, 0.0, 1.0)).xy;
 	fase = mundo.x * 0.0037 + mundo.y * 0.001;
 }
@@ -23,7 +26,7 @@ void fragment() {
 		float onda = sin(uv.x * 220.0 + TIME * 1.7 + fase) * sin(uv.x * 61.0 - TIME * 0.9);
 		float brillo = smoothstep(0.75, 1.0, onda) * smoothstep(0.55, 0.0, uv.y);
 		c.rgb += vec3(0.85, 0.9, 0.82) * brillo * 0.35;
-		COLOR = c * COLOR;
+		COLOR = c * tinte;  // (no * COLOR: en fragment() ya trae la textura, salia al cuadrado)
 	} else {
 		float lejos = colgante ? uv.y : 1.0 - uv.y;
 		float k = lejos * lejos;
@@ -32,6 +35,6 @@ void fragment() {
 		float s = sin(t) * 0.7 + sin(t * 2.3 + 1.7) * 0.3;
 		uv.x += s * amplitud * k;
 		vec4 c = texture(TEXTURE, uv);
-		COLOR = c * COLOR;
+		COLOR = c * tinte;  // (no * COLOR: en fragment() ya trae la textura, salia al cuadrado)
 	}
 }

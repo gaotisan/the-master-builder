@@ -26,6 +26,11 @@ const OBJETOS_EGIPTO := "res://assets/egipto/acto1/objetos/%s.png"
 ## ellos, con las manos ya en la piedra) y cuanto dura.
 @export var losa_esfuerzo := Vector2i(47, 60)
 @export var losa_segundos := 2.6
+## SOLO PLAYA (2026-10-26): sin ruinas ni sillares ni losa, el suelo plano de la
+## arena de punta a punta (mientras llegan las piezas nuevas). Los limites, los
+## de la arena de la tira.
+@export var solo_playa := false
+@export var limites_playa := Vector2(200.0, 22400.0)
 ## Para probar un tramo: {nombre del sillar: x0} donde empieza.
 @export var prueba_bloques := {}
 
@@ -42,17 +47,18 @@ func _ready() -> void:
 	nivel = JSON.parse_string(FileAccess.get_file_as_string(NIVEL))
 	var p := get_node_or_null(peregrino_ruta)
 	objetos = []
-	for t in nivel["terreno"]:
+	for t in ([] if solo_playa else nivel["terreno"]):
 		# (lo de altura 0 es el suelo de abajo, que ya esta: como objeto taparia
 		# las rendijas entre dos sillares juntos, que cuentan como uno)
 		if float(t["h"]) >= 1.0:
 			objetos.append(["_" + t["nombre"], t["x0"], t["x1"] - t["x0"], t["h"], "", "", true])
-	for b in nivel["bloques"]:
-		objetos.append([b["nombre"], b["x0"], b["ancho"], b["alto"], b["empuje"], b["accion"], b["trepable"]])
-	var l: Dictionary = nivel["losa"]
-	_losa_base = float(l.get("base", 0.0))
-	# (una columna hasta su cima; con empuje, para que andar contra ella llegue a _empezar_empuje)
-	objetos.append(["losa", l["x0"], l["ancho"], _losa_base + float(l["alto"]), "empujar_v2", "", false])
+	if not solo_playa:
+		for b in nivel["bloques"]:
+			objetos.append([b["nombre"], b["x0"], b["ancho"], b["alto"], b["empuje"], b["accion"], b["trepable"]])
+		var l: Dictionary = nivel["losa"]
+		_losa_base = float(l.get("base", 0.0))
+		# (una columna hasta su cima; con empuje, para que andar contra ella llegue a _empezar_empuje)
+		objetos.append(["losa", l["x0"], l["ancho"], _losa_base + float(l["alto"]), "empujar_v2", "", false])
 	sueltos = []
 	# las dos trepas se solapan (medio hasta 234, alto desde 232): sin el hueco
 	# de 225-252 que no se podia subir ni de una forma ni de otra, y que las
@@ -62,8 +68,8 @@ func _ready() -> void:
 		# el suelo de abajo manda (acciones_perfil.gd lo toma de donde pisa el
 		# peregrino al empezar) y los limites son los del nivel
 		p.position.y = float(nivel["suelo"])
-		p.limite_izquierdo = float(nivel["limites"][0])
-		p.limite_derecho = float(nivel["limites"][1])
+		p.limite_izquierdo = limites_playa.x if solo_playa else float(nivel["limites"][0])
+		p.limite_derecho = limites_playa.y if solo_playa else float(nivel["limites"][1])
 	super()
 	if _peregrino:
 		_peregrino.suelo_en = _suelo_peregrino
