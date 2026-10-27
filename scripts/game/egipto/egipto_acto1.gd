@@ -183,6 +183,20 @@ func _input(event: InputEvent) -> void:
 	if event.is_action("agacharse") and not event.is_echo():
 		_abajo_real = event.is_pressed()
 
+## La tecla del baston (accion "baston": Q o Z): sacarlo o guardarlo, como en la
+## hojarasca (2026-10-27; el usuario: "no podemos sacar el baston"). De parado,
+## con su animacion; andando, frena y la hace (baston.gd: alternar_mano). Con el
+## en la mano solo se anda: para correr, saltar o trepar hay que guardarlo. Ni
+## en las cinematicas ni a mitad de una accion; con el baculo clavado, el nodo
+## de las acciones (que la ve antes) se la queda.
+func _unhandled_input(event: InputEvent) -> void:
+	if not event.is_action_pressed("baston") or event.is_echo():
+		return
+	if _cine or _final or not _acciones.libre():
+		return
+	get_viewport().set_input_as_handled()
+	_baston.call("alternar_mano")
+
 func _physics_process(delta: float) -> void:
 	_t_juego += delta
 	# (en la playa, nada del recorrido: ni el paso bajo que agacha, ni los

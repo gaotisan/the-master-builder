@@ -54,11 +54,23 @@ from pathlib import Path
 import numpy as np
 from scipy import ndimage as ndi
 from scipy.ndimage import uniform_filter1d
-from celdas import cargar, PROY
+from celdas import cargar, PROY, TRES_JUEGO
 
 BANDA = 50               # fila del pivote: px bajo la punta de la capucha
 REF_CAPUCHA = 39         # fila del borde de atras de la capucha que hace de ancla
 GANANCIA = 0.8           # cuanto sigue el baston a la inclinacion del tronco
+# BLOQUE DE CORRER (2026-10-27; el usuario, en Egipto: el baston al correr y al
+# saltar corriendo "me parece irreal", y va sujeto con dos presillas, arriba y
+# abajo, como se ve de frente/espaldas). Desde el 2026-10-22 el juego usa la
+# hoja limpia con el bloque de correr de un solo video (correr_v2), que la de
+# origen no tiene: el baston seguia fotograma a fotograma al correr VIEJO (otro
+# numero de fotogramas, otro cuerpo). Estas se miden en la hoja del juego
+# (TRES_JUEGO); las demas siguen de la de origen (medidas en la limpia se
+# movian algun px, y coger_suelo hasta 75). Y como va atado a la espalda, aqui
+# sigue al tronco entero (GANANCIA_ATADO) y sin el ruido de la medida (_suave3
+# de la inclinacion y del ancla; en bucle, dando la vuelta).
+BLOQUE_CORRER = {"arranque_correr", "correr", "parada_correr", "salto_correr", "aterrizaje_correr"}
+GANANCIA_ATADO = 1.0
 ANG_REPOSO = 10.0         # grados, punta hacia atras
 AGACHADO_GIRO = -8.0      # grados extra con el agachado completo: paralelo al lomo
 ALTO_REPOSO = 320         # punta de la capucha sobre el suelo, de pie
@@ -356,12 +368,12 @@ def _muesca(c, a, top):
     return float(cols[sel].mean()), prof
 
 
-def colocar(m, m0):
+def colocar(m, m0, ganancia=GANANCIA):
     """Punto del eje del baston, giro en grados (+ = punta hacia atras con el
     personaje mirando a la derecha; en Godot se pasa a radianes con el signo
     cambiado) y si va delante del cuerpo."""
     fi = m["incl"] - m0["incl"]
-    th = ANG_REPOSO - GANANCIA * fi + AGACHADO_GIRO * m["agachado"]
+    th = ANG_REPOSO - ganancia * fi + AGACHADO_GIRO * m["agachado"]
     # el pivote cuelga de la capucha y se va hacia atras al inclinarse el tronco
     r = math.radians(fi)
     dx, dy = SEPARACION, BANDA - REF_CAPUCHA
@@ -869,8 +881,24 @@ def colocar_giro_delante(celdas, base, ms):
     return [(float(x), float(y), float(th), False, 0.0) for x, y, th in pos]
 
 
+def _suave_atado(ms, bucle):
+    """El bloque de correr: inclinacion y ancla de la capucha sin el ruido de
+    1-2 px de la medida (en bucle, dando la vuelta)."""
+    for k in ("incl", "atras", "top"):
+        v = np.array([m[k] for m in ms], float)
+        if bucle:
+            v = np.convolve(np.concatenate([v[-1:], v, v[:1]]), [0.25, 0.5, 0.25], mode="valid")
+        else:
+            v = _suave3(v)
+        for m, x in zip(ms, v):
+            m[k] = float(x)
+
+
 def seguir_todo():
     A = cargar()
+    J = cargar(TRES_JUEGO)
+    for nombre in BLOQUE_CORRER:
+        A[nombre] = J[nombre]
     m0 = medir(A["reposo"]["celdas"][0], SUELO_COMUN)
     datos = {}
     for nombre, an in A.items():
@@ -879,7 +907,11 @@ def seguir_todo():
             continue
         suelo = SUELO.get(nombre, SUELO_COMUN)
         ms = [medir(c, suelo, nombre in ACCIONES_PERFIL) for c in an["celdas"]]
-        base = [colocar(m, m0) for m in ms]
+        if nombre in BLOQUE_CORRER:
+            _suave_atado(ms, an["loop"])
+            base = [colocar(m, m0, GANANCIA_ATADO) for m in ms]
+        else:
+            base = [colocar(m, m0) for m in ms]
         if nombre in GIROS_POR_DELANTE:
             for m, c in zip(ms, an["celdas"]):
                 m.update(medir_giro(c, m))

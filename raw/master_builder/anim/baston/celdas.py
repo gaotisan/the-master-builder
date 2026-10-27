@@ -8,14 +8,17 @@ from PIL import Image
 
 PROY = Path(__file__).resolve().parents[4]
 TRES = PROY / "resources/characters/peregrino_frames.tres"
+# La hoja que usa el juego (2026-10-22): la gemela limpia, con el bloque de
+# correr de un solo video (correr_v2) que la de origen no tiene.
+TRES_JUEGO = PROY / "resources/characters/peregrino_frames_limpio.tres"
 
 
 def _res_path(p):
     return PROY / p.replace("res://", "")
 
 
-def cargar():
-    txt = TRES.read_text(encoding="utf-8")
+def cargar(tres=TRES):
+    txt = Path(tres).read_text(encoding="utf-8")
     tex = dict(re.findall(r'\[ext_resource type="Texture2D" path="([^"]+)" id="([^"]+)"\]', txt)[::1])
     tex = {i: p for p, i in tex.items()}
     atlas = {}
