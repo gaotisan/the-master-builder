@@ -20,6 +20,14 @@ extends Node2D
 @export var cuantas := Vector2i(4, 6)
 @export var tam := 24.0                 # px (de la capa) de largo de la capsula
 @export var humo := Color(1.0, 0.975, 0.94)
+## hacia el horizonte el humo se va al color del aire (la calima crema de las
+## montanas) y se aclara: lejos, nada es blanco puro (2026-10-28)
+@export var humo_lejos := Color(0.93, 0.84, 0.74)
+@export var humo_lejos_k := 0.6
+## las capsulas, de lejos: el aire de la ciudad (como NavePosada), mas fuerte,
+## que eran motas casi negras sobre el cielo
+@export var capsula_aire := 0.42
+@export var capsula_contraste := 0.55
 ## donde (en fraccion del ancho de lo que se ve) pueden perderse tras las
 ## montanas: no detras de la torre alta de la orilla de enfrente (a la
 ## izquierda, por delante de la ciudad), que parecia que se estrellaban en ella
@@ -34,6 +42,8 @@ var _espera := 0.0
 var _hecha := false
 var _caen: Array = []
 var _tex_capsula: Texture2D
+var _mat_capsula: ShaderMaterial
+var _mat_humo: ShaderMaterial
 var _mancha: GradientTexture2D
 var _rng := RandomNumberGenerator.new()
 var _t := 0.0
@@ -42,6 +52,21 @@ const VIDA_HUMO := 14.0                 # s que tardan las bocanadas en deshacer
 const VIDA_NUCLEO := 3.5                # s que dura la linea nitida de la estela
 const VIENTO := Vector2(-2.0, -1.0)     # px/s que deriva el humo (nucleo y bocanadas, igual)
 const VEL := Vector2(115.0, 165.0)      # px/s de la caida
+
+## El humo (nucleo y bocanadas): por la altura en pantalla, del blanco arriba al
+## color del aire en el horizonte ('y0' y 'y1', fracciones de la pantalla).
+const SHADER_HUMO := """
+shader_type canvas_item;
+uniform vec3 lejos;
+uniform float k;
+uniform float y0;
+uniform float y1;
+void fragment() {
+	vec4 c = texture(TEXTURE, UV) * COLOR;
+	float f = smoothstep(y0, y1, SCREEN_UV.y) * k;
+	COLOR = vec4(mix(c.rgb, lejos, f), c.a * (1.0 - 0.4 * f));
+}
+"""
 
 func _ready() -> void:
 	_rng.randomize()
@@ -78,6 +103,23 @@ func _ready() -> void:
 	# (morro abajo a la izquierda, como cae, y algo vuelta: se le ve el lomo al sol)
 	nave.rotation = Vector3(0.35, 0.55, 0.0)
 	_tex_capsula = vp.get_texture()
+	var sh := Shader.new()
+	sh.code = NavePosada.SHADER_AIRE
+	_mat_capsula = ShaderMaterial.new()
+	_mat_capsula.shader = sh
+	var a := NavePosada.AIRE
+	_mat_capsula.set_shader_parameter("aire", Vector3(a.r, a.g, a.b))
+	_mat_capsula.set_shader_parameter("k", capsula_aire)
+	_mat_capsula.set_shader_parameter("contraste", capsula_contraste)
+	_mat_capsula.set_shader_parameter("paso", 1.5)
+	var sh2 := Shader.new()
+	sh2.code = SHADER_HUMO
+	_mat_humo = ShaderMaterial.new()
+	_mat_humo.shader = sh2
+	_mat_humo.set_shader_parameter("lejos", Vector3(humo_lejos.r, humo_lejos.g, humo_lejos.b))
+	_mat_humo.set_shader_parameter("k", humo_lejos_k)
+	_mat_humo.set_shader_parameter("y0", 0.0)
+	_mat_humo.set_shader_parameter("y1", 0.3)
 
 ## La altura de la silueta (montanas, piramides, ciudad) en x: por debajo, tapado.
 func _y_silueta(x: float) -> float:
@@ -121,8 +163,21 @@ func _process(delta: float) -> void:
 		_espera -= delta
 		if _espera <= 0.0:
 			_hecha = _lanzar()
+	if not _caen.is_empty():
+		_horizonte()
 	for c in _caen.duplicate():
 		_mover(c, delta)
+
+## Donde cae el horizonte en la pantalla (para el color del humo).
+func _horizonte() -> void:
+	if not donde.is_valid():
+		return
+	var r: Rect2 = donde.call()
+	if r.size.y <= 0.0:
+		return
+	var f := (_y_silueta(r.get_center().x) - r.position.y) / r.size.y
+	_mat_humo.set_shader_parameter("y0", f - 0.24)
+	_mat_humo.set_shader_parameter("y1", f)
 
 ## Donde se pierde tras la silueta una capsula que sale de 'p' con velocidad 'v'.
 func _impacto(p: Vector2, v: Vector2) -> Vector2:
@@ -196,26 +251,27 @@ func _nueva(desde: Vector2, vel: Vector2, retraso: float) -> void:
 	linea.width_curve = w
 	var g := Gradient.new()
 	g.set_color(0, Color(humo, 0.0))
-	g.set_color(1, Color(humo, 0.95))
+	g.set_color(1, Color(humo, 0.88))
 	g.add_point(0.5, Color(humo, 0.6))
 	linea.gradient = g
+	linea.material = _mat_humo
 	add_child(linea)
 	# las bocanadas: muchas, suaves, que se hinchan y derivan con el viento
 	var bocanadas := CPUParticles2D.new()
 	bocanadas.texture = _mancha
 	bocanadas.local_coords = false
-	bocanadas.amount = 420
+	bocanadas.amount = 760
 	bocanadas.lifetime = VIDA_HUMO
 	bocanadas.emitting = false
 	bocanadas.direction = VIENTO.normalized()
-	bocanadas.spread = 25.0
-	bocanadas.initial_velocity_min = VIENTO.length() * 0.8
-	bocanadas.initial_velocity_max = VIENTO.length() * 1.2
+	bocanadas.spread = 40.0
+	bocanadas.initial_velocity_min = VIENTO.length() * 0.5
+	bocanadas.initial_velocity_max = VIENTO.length() * 1.6
 	bocanadas.gravity = Vector2.ZERO
 	bocanadas.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
-	bocanadas.emission_sphere_radius = tam * 0.15
-	bocanadas.scale_amount_min = tam * 0.022
-	bocanadas.scale_amount_max = tam * 0.036
+	bocanadas.emission_sphere_radius = tam * 0.22
+	bocanadas.scale_amount_min = tam * 0.016
+	bocanadas.scale_amount_max = tam * 0.04
 	var crece := Curve.new()
 	crece.add_point(Vector2(0.0, 0.6))
 	crece.add_point(Vector2(0.3, 1.5))
@@ -224,15 +280,17 @@ func _nueva(desde: Vector2, vel: Vector2, retraso: float) -> void:
 	var cg := Gradient.new()
 	cg.set_color(0, Color(humo, 0.0))
 	cg.set_color(1, Color(humo, 0.0))
-	cg.add_point(0.04, Color(humo, 0.42))
-	cg.add_point(0.45, Color(humo, 0.28))
+	cg.add_point(0.04, Color(humo, 0.3))
+	cg.add_point(0.45, Color(humo, 0.2))
 	bocanadas.color_ramp = cg
+	bocanadas.material = _mat_humo
 	add_child(bocanadas)
 	var capsula := Sprite2D.new()
 	capsula.texture = _tex_capsula
 	capsula.scale = Vector2.ONE * (tam / 130.0)   # (la nave mide ~130 px en su SubViewport)
 	capsula.position = desde
 	capsula.visible = false
+	capsula.material = _mat_capsula
 	add_child(capsula)
 	_caen.append({"capsula": capsula, "linea": linea, "bocanadas": bocanadas, "puntos": [], "nacidos": [],
 			"vel": vel, "retraso": retraso, "viva": true, "fase": _rng.randf() * TAU})

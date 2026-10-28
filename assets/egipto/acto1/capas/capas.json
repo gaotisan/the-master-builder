@@ -301,7 +301,7 @@
    "sentido": -1.0,
    "estado": "posada",
    "espera": 12.0,
-   "aire": 0.22
+   "aire": 0.28
   },
   {
    "capa": "ciudad",
@@ -311,7 +311,7 @@
    "sentido": 1.0,
    "estado": "posada",
    "espera": 45.0,
-   "aire": 0.22
+   "aire": 0.28
   },
   {
    "capa": "ciudad",
@@ -321,7 +321,7 @@
    "sentido": 1.0,
    "estado": "fuera",
    "espera": 6.0,
-   "aire": 0.22
+   "aire": 0.28
   },
   {
    "capa": "ciudad",
@@ -331,7 +331,7 @@
    "sentido": 1.0,
    "estado": "posada",
    "espera": 70.0,
-   "aire": 0.32
+   "aire": 0.36
   },
   {
    "capa": "ciudad",
@@ -341,7 +341,7 @@
    "sentido": -1.0,
    "estado": "fuera",
    "espera": 30.0,
-   "aire": 0.32
+   "aire": 0.36
   }
  ],
  "silueta": {

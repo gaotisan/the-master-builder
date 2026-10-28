@@ -829,7 +829,7 @@ def main():
         px, py = en_ciudad(x, y)
         # (las mas pequenas, mas lejos: mas aire)
         datos["naves"].append({"capa": "ciudad", "x": round(px, 1), "y": round(py, 1), "ancho": ancho_n,
-                               "aire": 0.22 if ancho_n >= 60.0 else 0.32,
+                               "aire": 0.28 if ancho_n >= 60.0 else 0.36,
                                "sentido": sentido, "estado": estado, "espera": espera})
     # donde se acaba la arena (la playa no puede seguir mas alla)
     for c in capas:

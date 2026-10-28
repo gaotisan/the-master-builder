@@ -26,8 +26,12 @@ const LARGO := 1.95                # unidades de la nave de cola a morro
 @export var giro_posada := 0.4     # vuelta de la nave posada (algo de 3/4)
 ## el aire de su capa: lo lejano se mezcla con el color del horizonte (como la
 ## ciudad del fondo, capas.py AIRE_CIUDAD)
-@export var aire := Color(0.69, 0.76, 0.75)
-@export var aire_k := 0.22
+const AIRE := Color(0.69, 0.76, 0.75)
+@export var aire := AIRE
+@export var aire_k := 0.28
+## y el contraste de su capa (la ciudad va al 62 %, capas.py LUZ_CIUDAD): sin el,
+## su marfil y su grafito eran lo mas claro y lo mas oscuro del plano (2026-10-28)
+@export var contraste := 0.75
 
 # la luz del pilono (tira del fondo): cara al sol 212,136,86 y en sombra 60,78,88
 const SOMBRA := Color(0.51, 0.63, 0.8)      # luz ambiente: lo que queda en sombra (sRGB)
@@ -41,6 +45,7 @@ const SHADER_AIRE := """
 shader_type canvas_item;
 uniform vec3 aire;
 uniform float k;
+uniform float contraste = 1.0;
 uniform float paso = 2.5;
 void fragment() {
 	vec4 c = vec4(0.0);
@@ -51,6 +56,7 @@ void fragment() {
 	}
 	c /= 9.0;
 	vec3 rgb = c.a > 0.001 ? c.rgb / c.a : c.rgb;
+	rgb = aire + (rgb - aire) * contraste;
 	COLOR = vec4(mix(rgb, aire, k), c.a * COLOR.a);
 }
 """
@@ -108,6 +114,7 @@ func _ready() -> void:
 	m.shader = sh
 	m.set_shader_parameter("aire", Vector3(aire.r, aire.g, aire.b))
 	m.set_shader_parameter("k", aire_k)
+	m.set_shader_parameter("contraste", contraste)
 	_img.material = m
 	add_child(_img)
 	_polvo = _hacer_polvo()
