@@ -14,10 +14,18 @@ extends "res://scripts/characters/acciones_perfil.gd"
 ##     apoyar las manos, unos segundos de esfuerzo sin avanzar y vuelta al
 ##     reposo; luego losa_intentada (el nivel corta ahi el acto). Esta sobre lo
 ##     que haya debajo (base), no en el suelo de abajo.
+##   - LAS REPISAS (2026-10-28, el recorrido de piedra: tools/egipto/recorrido.py):
+##     cajas con cara de arriba y de abajo, unas sobre otras. Lo que queda por
+##     encima de la cabeza (DESPEJE) no estorba: se pasa por debajo y no es
+##     suelo; lo demas, como siempre (cara que se trepa o se salta, suelo).
 
 signal losa_intentada
 
 const NIVEL := "res://assets/egipto/acto1/nivel.json"
+const RECORRIDO := "res://assets/egipto/acto1/recorrido.json"
+## Lo que tiene que quedar sobre los pies hasta la cara de abajo de una repisa
+## para pasar por debajo (el peregrino mide ~305 px con la capucha).
+const DESPEJE := 310.0
 const OBJETOS_EGIPTO := "res://assets/egipto/acto1/objetos/%s.png"
 
 ## Lo que sube o baja un escalon que se anda (px).
@@ -33,6 +41,12 @@ const OBJETOS_EGIPTO := "res://assets/egipto/acto1/objetos/%s.png"
 @export var limites_playa := Vector2(200.0, 22400.0)
 ## Para probar un tramo: {nombre del sillar: x0} donde empieza.
 @export var prueba_bloques := {}
+## En la playa, el recorrido de piedra (recorrido.json), si esta.
+@export var con_recorrido := true
+
+var recorrido := {}
+## la cara de abajo (altura sobre la arena) de cada caja que no llega al suelo
+var _abajo := {}
 
 var nivel := {}
 var _losa_base := 0.0
@@ -47,6 +61,15 @@ func _ready() -> void:
 	nivel = JSON.parse_string(FileAccess.get_file_as_string(NIVEL))
 	var p := get_node_or_null(peregrino_ruta)
 	objetos = []
+	if solo_playa and con_recorrido and FileAccess.file_exists(RECORRIDO):
+		recorrido = JSON.parse_string(FileAccess.get_file_as_string(RECORRIDO))
+		for c in recorrido["cajas"]:
+			var n := "_" + String(c["nombre"])
+			objetos.append([n, c["x0"], float(c["x1"]) - float(c["x0"]), c["arriba"], "", "", true])
+			if float(c["abajo"]) > 0.5:
+				_abajo[n] = float(c["abajo"])
+		if recorrido["marcas"].has("limite_izq"):
+			limites_playa.x = float(recorrido["marcas"]["limite_izq"])
 	for t in ([] if solo_playa else nivel["terreno"]):
 		# (lo de altura 0 es el suelo de abajo, que ya esta: como objeto taparia
 		# las rendijas entre dos sillares juntos, que cuentan como uno)
@@ -82,6 +105,34 @@ func _ready() -> void:
 ## La y de lo que se pisa en x (para colocar al peregrino).
 func altura_en(x: float) -> float:
 	return _nivel(x)
+
+## LAS REPISAS: el suelo de x para el peregrino donde esta (sus pies, el nodo:
+## en el aire se queda a la altura del despegue). Como el de acciones_perfil.gd,
+## sin las cajas que le quedan por encima de la cabeza.
+func _nivel(x: float) -> float:
+	if _abajo.is_empty() or _peregrino == null:
+		return super(x)
+	var pies := _suelo - _peregrino.position.y
+	var y := _suelo
+	var dentro := false
+	var izq: Objeto = null
+	var der: Objeto = null
+	for o in _obj:
+		if float(_abajo.get(o.nombre, 0.0)) >= pies + DESPEJE:
+			continue
+		if x > o.x0 + 0.01 and x < o.x1() - 0.01:
+			y = minf(y, _suelo - o.alto)
+			dentro = true
+		elif not dentro:
+			if o.x1() <= x + 0.01 and (izq == null or o.x1() > izq.x1()):
+				izq = o
+			if o.x0 >= x - 0.01 and (der == null or o.x0 < der.x0):
+				der = o
+	if dentro:
+		return y
+	if izq and der and der.x0 - izq.x1() < HUECO_JUNTOS:
+		return maxf(_suelo - izq.alto, _suelo - der.alto)
+	return y
 
 ## Sin accion en curso (andando, quieto, saltando).
 func libre() -> bool:

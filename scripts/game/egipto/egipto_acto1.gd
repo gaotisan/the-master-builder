@@ -39,6 +39,10 @@ const TIRA := "res://assets/egipto/acto1/tira/tira.json"
 ## LAS CAPAS de tiras generadas por separado (tools/egipto/capas.py): van
 ## delante de las de la tira en la lista y quitan las de la tira que nombran.
 const CAPAS := "res://assets/egipto/acto1/capas/capas.json"
+## La musica del acto (2026-10-28, del usuario: "Act I - Ancient Exploration",
+## en lugar del viento; sin el segundo de silencio del principio). En bucle: la
+## pista entra y se va en fundido, asi que vuelve a empezar sin corte.
+const MUSICA := preload("res://assets/audio/musica_egipto_acto1.ogg")
 ## El zoom con el que las capas de la tira casan como en la imagen (las lejanas
 ## casi no siguen el zoom de la camara) y la camara de referencia (todas
 ## alineadas como en la imagen).
@@ -70,6 +74,8 @@ const ANDANDO := ["REPOSO", "ARRANQUE_ANDAR", "ANDAR", "PARADA_ANDAR", "ARRANQUE
 @export var segundos_mirador := 6.0
 ## Para probar un tramo: empieza aqui (sin la entrada). Negativo: desde el principio.
 @export var x_prueba := -1.0
+@export var musica_db := -12.0     # (como la del camino en la hojarasca)
+@export var musica_entrada := 3.0    # s del fundido al empezar
 
 @onready var _peregrino: Node2D = $DarkStage/Peregrino
 @onready var _camara: Camera2D = $DarkStage/Camera
@@ -110,6 +116,10 @@ var _datos_capas: Dictionary = {}
 var _tira_capas: Array = []      # [CanvasLayer, paralaje x, paralaje y]
 var _con_tira := false
 var _arena_delante: CanvasLayer
+var _tex_contacto: ImageTexture
+var _tex_mota: Texture2D
+var _y_salto := NAN
+var _anim_antes := ""
 ## SOLO PLAYA (ver acciones_egipto.gd): sin las piezas del recorrido ni sus
 ## cinematicas; la camara con un encuadre fijo.
 var _solo_playa := false
@@ -120,6 +130,9 @@ var _t_juego := 0.0
 @export var zoom_playa := 0.87
 ## los pies, hacia el 88 % de la pantalla: la arena justa, como en la imagen
 @export var pies_playa := 0.38
+@export var pies_subido := 0.2      # (lo mismo a 900 px de altura o mas)
+@export var zoom_mirador := 0.68     # en lo alto del mirador (recorrido.json "mirador")
+@export var pies_mirador := 0.12
 
 func _ready() -> void:
 	nivel = _acciones.nivel
@@ -131,6 +144,9 @@ func _ready() -> void:
 		# que el cielo estaba negro)
 		entrada = false
 	var x0: float = nivel["marcas"]["inicio"] if entrada else nivel["marcas"]["contemplar"]
+	if _acciones.solo_playa and _acciones.recorrido.get("marcas", {}).has("inicio"):
+		# (el recorrido de piedra: donde aparece el peregrino)
+		x0 = float(_acciones.recorrido["marcas"]["inicio"])
 	if x_prueba >= 0.0:
 		x0 = x_prueba
 	_peregrino.position = Vector2(x0, _acciones.altura_en(x0))
@@ -149,6 +165,7 @@ func _ready() -> void:
 		_x_fin = _acciones.limites_playa.y + 600.0
 	# (los datos de movimiento de DarkStage, solo para estudiarlo)
 	$DarkStage/DatosMovimiento.visible = false
+	_musica()
 	_fondo()
 	_con_tira = ResourceLoader.exists(TIRA)
 	if _con_tira:
@@ -157,6 +174,7 @@ func _ready() -> void:
 		_montar_fondo()
 	if _solo_playa:
 		boceto = false
+		_montar_recorrido()
 		_luz_y_aire()
 	elif ResourceLoader.exists(ARTE):
 		boceto = false
@@ -204,6 +222,13 @@ func _physics_process(delta: float) -> void:
 		_peldanos(delta)
 		_mirador_si_toca()
 		_caidas()
+	elif not _acciones.recorrido.is_empty():
+		# (el recorrido de piedra: sus escalones y las caidas, la sombra de las
+		# repisas y el polvo)
+		_peldanos(delta)
+		_caidas()
+		_sombra_repisas()
+		_polvo_recorrido()
 	_mover_camara(delta)
 	_mover_bandas(delta)
 	_mover_sombra()
@@ -242,7 +267,19 @@ func _peldanos(delta: float) -> void:
 func _clave(x: float) -> Vector2:
 	if _solo_playa:
 		# (los pies hacia el 82 % de la pantalla: menos arena, mas cielo y fondo)
-		return Vector2(zoom_playa, round(pies_playa * 1632.0 / zoom_playa))
+		# subido al recorrido de piedra, los pies mas arriba en la pantalla: que
+		# se vea lo de abajo (por donde ha subido), no solo el cielo
+		var alto := clampf((float(nivel["suelo"]) - _y_ref) / 900.0, 0.0, 1.0)
+		var pies := lerpf(pies_playa, pies_subido, alto)
+		var zoom := zoom_playa
+		# en lo alto del mirador, la camara se abre: que luzca la vista
+		var mr: Dictionary = _acciones.recorrido.get("marcas", {})
+		if mr.has("mirador"):
+			var cerca := 1.0 - smoothstep(250.0, 700.0, absf(x - float(mr["mirador"])))
+			var k := cerca * smoothstep(950.0, 1150.0, float(nivel["suelo"]) - _y_ref)
+			zoom = lerpf(zoom_playa, zoom_mirador, k)
+			pies = lerpf(pies, pies_mirador, k)
+		return Vector2(zoom, round(pies * 1632.0 / zoom))
 	var c: Array = nivel["camara"]
 	if c.is_empty():
 		return Vector2(0.7, 380.0)
@@ -499,6 +536,192 @@ func _al_intentar_losa() -> void:
 	tw.tween_property(_negro, "modulate:a", 1.0, 3.0)
 	tw.tween_property(_rotulo, "modulate:a", 1.0, 2.0).set_delay(0.6)
 
+## ---- el recorrido de piedra (tools/egipto/recorrido.py) ---------------------------
+## Las piezas del usuario sobre la arena, detras del peregrino; lo que se pisa
+## (sus cajas) lo lleva acciones_egipto.gd.
+func _montar_recorrido() -> void:
+	var r: Dictionary = _acciones.recorrido
+	if r.is_empty():
+		return
+	var n := Node2D.new()
+	n.name = "Recorrido"
+	n.z_index = -6
+	n.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	add_child(n)
+	var suelo := float(nivel["suelo"])
+	for d in r["sprites"]:
+		var s := Sprite2D.new()
+		s.texture = load(d["tex"])
+		s.centered = false
+		s.flip_h = d["flip"]
+		var e: float = d["escala"]
+		s.scale = Vector2(e, e)
+		# (lo que se pisa, a la altura de los pies: PLANTA, como los objetos)
+		s.position = Vector2(d["x"], suelo - _acciones.PLANTA - float(d["abajo"]) - float(d["alto"]))
+		# junto a la arena la piedra se oscurece y enfria (le llega menos cielo)
+		var m := ShaderMaterial.new()
+		m.shader = PIE_PIEDRA
+		var alto: float = d["alto"]
+		m.set_shader_parameter("suelo_uv", 1.0 + float(d["abajo"]) / alto)
+		m.set_shader_parameter("banda_uv", PIE_BANDA / alto)
+		s.material = m
+		n.add_child(s)
+		_sombra_contacto(float(d["x"]), float(d["x"]) + float(d["ancho"]), suelo)
+	# las palomas posadas (se espantan al acercarse el peregrino)
+	var i_pj := 0
+	for pj in r.get("pajaros", []):
+		var b := PajaroPosado.new()
+		# (cada una con un plumaje distinto, por turno)
+		b.plumaje = (i_pj * 2) % PajaroPosado.PLUMAJES.size()
+		i_pj += 1
+		b.position = Vector2(float(pj["x"]), suelo - _acciones.PLANTA - float(pj["h"]))
+		b.sentido = float(pj["sentido"])
+		b.peregrino = _peregrino
+		b.z_index = -2
+		add_child(b)
+	# F3 ver lo que se pisa, F4 marcar un fallo (marcas_recorrido.gd)
+	var m := MarcasRecorrido.new()
+	m.acciones = _acciones
+	m.peregrino = _peregrino
+	add_child(m)
+
+## La piedra del recorrido junto a la arena: mas oscura y mas fria en los
+## PIE_BANDA px de abajo (la luz que rebota del cielo no llega).
+const PIE_BANDA := 110.0
+const PIE_PIEDRA := preload("res://scripts/game/egipto/pie_piedra.gdshader")
+
+## La sombra de contacto de una pieza en la arena de delante (por delante de la
+## arena, no de la pieza: va en la capa de la arena de delante).
+func _sombra_contacto(x0: float, x1: float, suelo: float) -> void:
+	if _arena_delante == null:
+		return
+	if _tex_contacto == null:
+		var im := Image.create(128, 32, false, Image.FORMAT_RGBA8)
+		for y in 32:
+			for x in 128:
+				var v := float(y) / 31.0
+				var u := float(x) / 127.0
+				var borde := clampf(minf(u, 1.0 - u) / 0.06, 0.0, 1.0)
+				im.set_pixel(x, y, Color(0.16, 0.13, 0.15, 0.42 * pow(1.0 - v, 1.6) * borde))
+		_tex_contacto = ImageTexture.create_from_image(im)
+	var s := Sprite2D.new()
+	s.texture = _tex_contacto
+	s.centered = false
+	s.position = Vector2(x0 - 30.0, suelo + 14.0)
+	s.scale = Vector2((x1 - x0 + 60.0) / 128.0, 70.0 / 32.0)
+	_arena_delante.add_child(s)
+
+## ---- la luz y el polvo del recorrido ---------------------------------------------
+
+## Bajo una repisa (una caja por encima de la cabeza), el peregrino en su sombra.
+func _sombra_repisas() -> void:
+	var p := _peregrino
+	var pies := float(nivel["suelo"]) - p.position.y
+	var debajo := false
+	for c in _acciones.recorrido["cajas"]:
+		var ab := float(c["abajo"])
+		if ab > pies + 120.0 and ab < pies + 900.0 and p.position.x > float(c["x0"]) + 20.0 and p.position.x < float(c["x1"]) - 20.0:
+			debajo = true
+			break
+	_luz_peregrino = lerpf(_luz_peregrino, 0.74 if debajo else 1.0, 0.06)
+	var k := _luz_peregrino
+	# (la sombra, algo azul: la llena el cielo)
+	p.modulate = Color(k, k * 1.01, minf(k * 1.08, 1.0))
+
+## Una nube de polvo en pos (cuanto: 0..1). Sobre la arena, de arena; sobre la
+## piedra, mas palido.
+func _polvo_en(pos: Vector2, cuanto: float, piedra: bool) -> void:
+	var e := CPUParticles2D.new()
+	e.one_shot = true
+	e.explosiveness = 0.9
+	e.amount = int(lerpf(6.0, 22.0, cuanto))
+	e.lifetime = lerpf(0.7, 1.4, cuanto)
+	e.position = pos
+	e.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	e.emission_rect_extents = Vector2(40.0, 4.0)
+	e.direction = Vector2(0, -1)
+	e.spread = 80.0
+	e.gravity = Vector2(0, 60)
+	e.initial_velocity_min = 30.0
+	e.initial_velocity_max = lerpf(70.0, 160.0, cuanto)
+	e.damping_min = 40.0
+	e.damping_max = 80.0
+	e.texture = _mota()
+	e.scale_amount_min = 0.5
+	e.scale_amount_max = lerpf(0.9, 1.6, cuanto)
+	var crece := Curve.new()
+	crece.add_point(Vector2(0, 0.5))
+	crece.add_point(Vector2(1, 1.6))
+	e.scale_amount_curve = crece
+	var c := Color(0.92, 0.86, 0.76) if piedra else Color(0.9, 0.78, 0.62)
+	var g := Gradient.new()
+	g.set_color(0, Color(c, 0.0))
+	g.set_color(1, Color(c, 0.0))
+	g.add_point(0.12, Color(c, 0.5 if piedra else 0.6))
+	e.color_ramp = g
+	e.z_index = 2
+	add_child(e)
+	e.emitting = true
+	get_tree().create_timer(e.lifetime + 0.3).timeout.connect(e.queue_free)
+
+## Arenilla y piedrecitas que caen del filo al trepar.
+func _arenilla_en(pos: Vector2) -> void:
+	var e := CPUParticles2D.new()
+	e.one_shot = true
+	e.explosiveness = 0.3
+	e.amount = 14
+	e.lifetime = 1.3
+	e.position = pos
+	e.emission_shape = CPUParticles2D.EMISSION_SHAPE_RECTANGLE
+	e.emission_rect_extents = Vector2(26.0, 2.0)
+	e.direction = Vector2(0, 1)
+	e.spread = 20.0
+	e.gravity = Vector2(0, 900)
+	e.initial_velocity_min = 10.0
+	e.initial_velocity_max = 60.0
+	e.texture = _mota()
+	e.scale_amount_min = 0.12
+	e.scale_amount_max = 0.3
+	e.color = Color(0.78, 0.68, 0.56, 0.9)
+	e.z_index = 2
+	add_child(e)
+	e.emitting = true
+	get_tree().create_timer(2.0).timeout.connect(e.queue_free)
+
+func _mota() -> Texture2D:
+	if _tex_mota == null:
+		var g := Gradient.new()
+		g.set_color(0, Color(1, 1, 1, 1))
+		g.set_color(1, Color(1, 1, 1, 0))
+		var tex := GradientTexture2D.new()
+		tex.gradient = g
+		tex.fill = GradientTexture2D.FILL_RADIAL
+		tex.fill_from = Vector2(0.5, 0.5)
+		tex.fill_to = Vector2(1.0, 0.5)
+		tex.width = 32
+		tex.height = 32
+		_tex_mota = tex
+	return _tex_mota
+
+## Al aterrizar, polvo (mas cuanto mas cae); al empezar a trepar, arenilla que
+## cae del filo donde se agarra.
+func _polvo_recorrido() -> void:
+	var e := _estado()
+	var p := _peregrino
+	var suelo := float(nivel["suelo"])
+	if e == "SALTAR":
+		if is_nan(_y_salto):
+			_y_salto = p.position.y
+	elif not is_nan(_y_salto):
+		var caida := p.position.y - _y_salto
+		_polvo_en(p.position + Vector2(0, -2), clampf(0.25 + caida / 600.0, 0.15, 1.0), absf(p.position.y - suelo) > 2.0)
+		_y_salto = NAN
+	var anim: String = _acciones._anim if _acciones._modo == _acciones.Modo.ACCION else ""
+	if anim != _anim_antes and anim.begins_with("trepar"):
+		var cara: float = float(_acciones._datos[anim]["cara"])
+		_arenilla_en(Vector2(p.position.x + _acciones._d * (cara + 20.0), _acciones._y_fin - 4.0))
+	_anim_antes = anim
+
 ## ---- el arte (tools/egipto/montaje.py) -------------------------------------------
 
 func _montar_arte() -> void:
@@ -654,6 +877,21 @@ func _montar_tira() -> void:
 			var x1: float = float(datos["x0"]) + float(datos["ancho"]) * ec / e
 			_barcos_tira(capa, float(datos["x0"]), x1, y0, y1)
 		k += 1
+
+## La musica del acto en lugar del viento (el de DarkStage, que es de toda la
+## intro: aqui se baja al silencio y vuelve a subir la escena que lo use).
+func _musica() -> void:
+	WindAmbience.gust_db = 0.0
+	WindAmbience.fade_to(MusicAmbience.SILENCIO, 0.0)
+	var pista := MUSICA.duplicate() as AudioStreamOggVorbis
+	pista.loop = true
+	var p := AudioStreamPlayer.new()
+	p.stream = pista
+	p.volume_db = MusicAmbience.SILENCIO
+	add_child(p)
+	p.play()
+	var tw := create_tween()
+	tw.tween_property(p, "volume_db", musica_db, musica_entrada).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 ## La orilla de enfrente: el viento en su vegetacion (con su mascara, la pieza
 ## *_viento_N de al lado) y el temblor de su reflejo.

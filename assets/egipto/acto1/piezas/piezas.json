@@ -1,0 +1,214 @@
+{
+ "arco_bajo": [
+  1614,
+  537
+ ],
+ "bloque_grande": [
+  1007,
+  1020
+ ],
+ "columna_loto": [
+  621,
+  1497
+ ],
+ "kit_pilares_0": [
+  281,
+  906
+ ],
+ "kit_pilares_1": [
+  470,
+  900
+ ],
+ "kit_pilares_2": [
+  590,
+  603
+ ],
+ "kit_ruinas_0": [
+  953,
+  206
+ ],
+ "kit_ruinas_1": [
+  384,
+  227
+ ],
+ "kit_ruinas_2": [
+  242,
+  265
+ ],
+ "kit_ruinas_3": [
+  316,
+  199
+ ],
+ "kit_ruinas_4": [
+  327,
+  191
+ ],
+ "kit_ruinas_5": [
+  201,
+  230
+ ],
+ "kit_ruinas_6": [
+  308,
+  142
+ ],
+ "kit_ruinas_7": [
+  342,
+  183
+ ],
+ "kit_ruinas_8": [
+  1625,
+  280
+ ],
+ "kit_egipcio_0": [
+  448,
+  123
+ ],
+ "kit_egipcio_1": [
+  337,
+  171
+ ],
+ "kit_egipcio_2": [
+  269,
+  157
+ ],
+ "kit_egipcio_3": [
+  458,
+  154
+ ],
+ "kit_egipcio_4": [
+  262,
+  181
+ ],
+ "kit_egipcio_5": [
+  598,
+  311
+ ],
+ "kit_egipcio_6": [
+  180,
+  351
+ ],
+ "kit_egipcio_7": [
+  254,
+  325
+ ],
+ "kit_egipcio_8": [
+  179,
+  284
+ ],
+ "kit_egipcio_9": [
+  388,
+  300
+ ],
+ "kit_egipcio_10": [
+  524,
+  283
+ ],
+ "kit_egipcio_11": [
+  631,
+  194
+ ],
+ "muro_puerta": [
+  1183,
+  1034
+ ],
+ "muro_largo": [
+  2100,
+  287
+ ],
+ "obelisco": [
+  634,
+  1455
+ ],
+ "kit_obelisco_0": [
+  398,
+  871
+ ],
+ "kit_obelisco_1": [
+  345,
+  811
+ ],
+ "pasadizo": [
+  1877,
+  689
+ ],
+ "plataforma_alta": [
+  1906,
+  377
+ ],
+ "plataforma_baja": [
+  1924,
+  176
+ ],
+ "plataforma_rocosa": [
+  2106,
+  429
+ ],
+ "portal_caido": [
+  1486,
+  896
+ ],
+ "puente_dintel": [
+  1664,
+  633
+ ],
+ "puente_arcos": [
+  2056,
+  448
+ ],
+ "puente_corto": [
+  1427,
+  614
+ ],
+ "ruina_mesa": [
+  1655,
+  471
+ ],
+ "ruina_torre": [
+  1682,
+  693
+ ],
+ "kit_muro_portico_0": [
+  1092,
+  306
+ ],
+ "kit_muro_portico_1": [
+  865,
+  349
+ ],
+ "ruina_escalera": [
+  1771,
+  474
+ ],
+ "ruina_base_rocosa": [
+  2005,
+  450
+ ],
+ "gradas": [
+  1512,
+  844
+ ],
+ "ruina_escalinata": [
+  1655,
+  471
+ ],
+ "templo_pisos": [
+  2097,
+  544
+ ],
+ "templo_terrazas": [
+  1744,
+  837
+ ],
+ "templo_rampa": [
+  1762,
+  804
+ ],
+ "portico_caido": [
+  1654,
+  733
+ ],
+ "templo_escalinata": [
+  1766,
+  829
+ ]
+}

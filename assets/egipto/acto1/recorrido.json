@@ -1,0 +1,167 @@
+{
+ "sprites": [
+  {
+   "tex": "res://assets/egipto/acto1/piezas/templo_terrazas.png",
+   "x": -800.0,
+   "abajo": -85.0,
+   "escala": 1.8,
+   "flip": false,
+   "ancho": 3139.2,
+   "alto": 1506.6
+  }
+ ],
+ "cajas": [
+  {
+   "x0": -800.0,
+   "x1": -368.0,
+   "arriba": 89.6,
+   "abajo": 0.0,
+   "pieza": "templo_terrazas",
+   "nombre": "c000"
+  },
+  {
+   "x0": -368.0,
+   "x1": 1288.0,
+   "arriba": 44.6,
+   "abajo": 0.0,
+   "pieza": "templo_terrazas",
+   "nombre": "c001"
+  },
+  {
+   "x0": 1288.0,
+   "x1": 2339.2,
+   "arriba": 116.6,
+   "abajo": 0.0,
+   "pieza": "templo_terrazas",
+   "nombre": "c002"
+  },
+  {
+   "x0": 10.0,
+   "x1": 226.0,
+   "arriba": 179.6,
+   "abajo": 0.0,
+   "pieza": "templo_terrazas",
+   "nombre": "c003"
+  },
+  {
+   "x0": 217.0,
+   "x1": 595.0,
+   "arriba": 269.6,
+   "abajo": 0.0,
+   "pieza": "templo_terrazas",
+   "nombre": "c004"
+  },
+  {
+   "x0": -260.0,
+   "x1": 100.0,
+   "arriba": 426.2,
+   "abajo": 368.6,
+   "pieza": "templo_terrazas",
+   "nombre": "c005"
+  },
+  {
+   "x0": -791.0,
+   "x1": -494.0,
+   "arriba": 584.6,
+   "abajo": 521.6,
+   "pieza": "templo_terrazas",
+   "nombre": "c006"
+  },
+  {
+   "x0": 100.0,
+   "x1": 550.0,
+   "arriba": 647.6,
+   "abajo": 590.0,
+   "pieza": "templo_terrazas",
+   "nombre": "c007"
+  },
+  {
+   "x0": 481.6,
+   "x1": 715.6,
+   "arriba": 779.0,
+   "abajo": 269.6,
+   "pieza": "templo_terrazas",
+   "nombre": "c008"
+  },
+  {
+   "x0": 649.0,
+   "x1": 856.0,
+   "arriba": 926.6,
+   "abajo": 872.6,
+   "pieza": "templo_terrazas",
+   "nombre": "c009"
+  },
+  {
+   "x0": 829.0,
+   "x1": 1252.0,
+   "arriba": 977.0,
+   "abajo": 917.6,
+   "pieza": "templo_terrazas",
+   "nombre": "c010"
+  },
+  {
+   "x0": 1066.6,
+   "x1": 1180.0,
+   "arriba": 1061.6,
+   "abajo": 977.0,
+   "pieza": "templo_terrazas",
+   "nombre": "c011"
+  },
+  {
+   "x0": 1180.0,
+   "x1": 1482.4,
+   "arriba": 1124.6,
+   "abajo": 977.0,
+   "pieza": "templo_terrazas",
+   "nombre": "c012"
+  },
+  {
+   "x0": 1441.0,
+   "x1": 2339.2,
+   "arriba": 980.6,
+   "abajo": 917.6,
+   "pieza": "templo_terrazas",
+   "nombre": "c013"
+  },
+  {
+   "x0": 1734.4,
+   "x1": 2137.6,
+   "arriba": 1220.0,
+   "abajo": 980.6,
+   "pieza": "templo_terrazas",
+   "nombre": "c014"
+  }
+ ],
+ "marcas": {
+  "inicio": -206.0,
+  "limite_izq": -760.0,
+  "mirador": 1936.0
+ },
+ "pajaros": [
+  {
+   "x": -647.0,
+   "h": 584.0,
+   "sentido": 1.0
+  },
+  {
+   "x": 28.0,
+   "h": 426.0,
+   "sentido": -1.0
+  },
+  {
+   "x": 460.0,
+   "h": 648.0,
+   "sentido": 1.0
+  },
+  {
+   "x": 2260.0,
+   "h": 981.0,
+   "sentido": -1.0
+  },
+  {
+   "x": 2215.0,
+   "h": 981.0,
+   "sentido": 1.0
+  }
+ ]
+}

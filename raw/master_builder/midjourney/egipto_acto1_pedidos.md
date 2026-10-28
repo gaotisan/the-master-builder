@@ -155,3 +155,59 @@ con alguna luz. Se recorta con
 ```
 A small sleek alien scout ship in the style of Planet of Lana, strict side view, smooth rounded organic hull like a seed pod, dark graphite and pale ivory panels, a thin soft cyan glowing strip, two short landing legs extended underneath, minimal and elegant, geometric low poly painterly style, soft neutral morning light from the upper left, centered, isolated on a flat solid #00FF00 green background, no shadows, no text --ar 3:2 --v 8.2 --no orange tint, golden hour, sunset
 ```
+
+## 7. El recorrido de piedra: que no quede pegado (2026-10-28)
+
+Para vestir las piezas de piedra del recorrido (las de `Downloads/piezas_piedra`,
+copiadas en `raw/master_builder/referencias/egipto_piezas/`). Todo sobre **verde
+liso** y con el **mismo estilo que esas piezas**, para que casen:
+
+- Estilo: `--sref` con una de tus piezas (la mejor, `Ruinas de templo egipcio sobre verde croma.png`) y `--sw 250`.
+- Vista de lado estricta (ortográfica), como el juego; luz del sol desde arriba a la izquierda, como en las piezas.
+- Varias piezas por imagen, **separadas con mucho verde entre ellas** (el recorte separa los kits solo).
+- Se recortan con `python -I tools/egipto/piezas.py` (añadiendo su nombre en `NOMBRES`, como `kit_...`).
+
+**7a. Plantas que crecen en la piedra.** Lo que más quita el "recién hecho".
+
+```
+Set of separate small desert plants that grow on ancient sandstone ruins, strict side view, each piece separate with wide green space around it: dry grass tufts of several sizes, a small thorny shrub, hanging vines with small leaves falling from a ledge edge, a creeping plant along a crack, a clump of wild papyrus in a sand pocket, a young date palm sprouting from rubble; 8 separate pieces in two rows, natural irregular silhouettes, stylized low poly painterly game asset style, warm sunlight from the upper left, isolated on a flat solid #00FF00 green background, no ground plane, no text --ar 3:2 --v 8.2
+```
+
+```
+Set of separate hanging plants and roots for a 2D platformer, strict side view: long vines hanging straight down from a stone ledge edge (3 different lengths), tree roots creeping down over a wall face, ivy draping over a block corner; 6 separate pieces with wide space between them, stylized low poly painterly game asset style, warm sunlight from the upper left, isolated on a flat solid #00FF00 green background, no text --ar 3:2 --v 8.2
+```
+
+**7b. La arena contra la piedra.** Para que las bases no se posen en la arena
+con un canto recto: arena amontonada al pie de los muros y derramada en las repisas.
+
+```
+Set of separate desert sand drift pieces for a 2D side view platformer, strict side view: wind blown sand piled against the foot of a wall (left and right versions), a long low sand drift, small sand mounds, sand spilling over the edge of a ledge, a thin layer of sand with ripples to lay on top of a stone platform; 7 separate pieces with wide space between them, soft pale warm sand, stylized low poly painterly game asset style, warm sunlight from the upper left, isolated on a flat solid #00FF00 green background, no text --ar 3:1 --v 8.2
+```
+
+**7c. Adornos.** Lo que hace que una ruina parezca un sitio, no un decorado.
+
+```
+Set of separate ancient Egyptian props for a 2D side view platformer, strict side view: a bronze fire brazier on a tripod, a tall clay amphora, a broken amphora with spilled grain, a stack of clay jars, a small statue of a seated cat (Bastet), a stone offering table, a fallen piece of carved lintel with hieroglyphs, a woven basket; 8 separate pieces with wide space between them, stylized low poly painterly game asset style, warm sunlight from the upper left, isolated on a flat solid #00FF00 green background, no text --ar 3:2 --v 8.2
+```
+
+```
+Set of separate ancient Egyptian cloth banners and awnings for a 2D side view game, strict side view: a tall faded linen banner hanging from a wooden pole, a torn awning cloth stretched between two poles, a long narrow pennant, a cloth hanging from a ledge edge; 4 separate pieces with wide space between them, faded blue, ochre and white linen, stylized low poly painterly game asset style, warm sunlight from the upper left, isolated on a flat solid #00FF00 green background, no text --ar 3:2 --v 8.2
+```
+
+(Si alguna tela quieres que ondee de verdad: en Flow, *la tela ondeando con
+viento suave sobre verde, cámara quieta, un ciclo que se repite*.)
+
+**7d. Primer plano (pasa por delante de la cámara).** Grande, oscuro y algo
+desenfocado: da la profundidad de los juegos grandes.
+
+```
+Very close foreground elements for a 2D side view game, large in frame and slightly out of focus, darker in shadow: the edge of a palm tree trunk with a few fronds hanging, a big rough sandstone rock, a fallen column drum, a clump of tall reeds rising from the bottom edge; 4 separate pieces with wide space between them, stylized low poly painterly game asset style, isolated on a flat solid #00FF00 green background, no text --ar 2:1 --v 8.2
+```
+
+**7e. Plano intermedio (entre el templo y el río).** Ruinas bajas y palmeras
+más pequeñas y algo más pálidas (con aire), que unan el recorrido con la orilla
+de enfrente.
+
+```
+Long horizontal strip of low distant Egyptian ruins and palm groves on a riverbank, strict side view, orthographic elevation: broken low walls, column stumps, a few date palms and bushes, slightly hazy and pale with distance, flat and horizontal, no perspective, stylized low poly painterly style, warm sunlight from the upper left, everything above the ruins and below the ground line is flat solid #00FF00 green, no characters, no text --ar 6:1 --v 8.2
+```
