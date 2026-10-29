@@ -228,6 +228,8 @@ SOLAPE = 3
 # vea por debajo sea mas uniforme"): px del video que se hunde, poco a poco tras
 # el relevo (TemploRio)
 HUNDIR = 8
+COLOR_QUIETO = 12    # diferencia (0-255) con lo de siempre por debajo de la cual un px de atras es eso
+SIEMPRE = 0.85       # parte de los fotogramas con la que un px de atras esta en todos
 HUECO_MAX = 60       # px del hueco mas grande que se rellena en el remero de atras
 RECORTE = (760, 380, 1280, 650)    # x0, y0, x1, y1 donde se busca el barco
 POR_FOTOGRAMA = 4.87 # px que avanza (seguido con subpixel del 526 al 556; luego el video da un salto)
@@ -404,10 +406,15 @@ def seguir_retoque():
         alfas[i] = np.minimum(u[..., 3], (auto[i][..., 3] * (1 - q)).astype(np.uint8))
     # SIN PARPADEO (el usuario: "se ven los pixeles que parpadean ... cosas que
     # estan y no estan"): en el remero, cada px como la mediana de su fotograma y
-    # los de al lado (lo que sale en uno solo, fuera; el borde, quieto)
+    # los dos de cada lado (lo que sale en uno o dos, fuera; el borde, quieto)
+    # y lo que esta en casi todos, en todos; lo que casi nunca, en ninguno (el
+    # remo, que barre, se rehace despues)
+    todos = np.stack(alfas)
+    veces = (todos > 128).mean(0)
     for i in range(n - 1):
-        tres = np.stack([alfas[max(0, i - 1)], alfas[i], alfas[i + 1]])
-        quieta = np.median(tres, 0).astype(np.uint8)
+        cinco = todos[max(0, i - 2):i + 3]
+        quieta = np.median(cinco, 0)
+        quieta = np.where(veces >= SIEMPRE, 255, np.where(veces <= 1 - SIEMPRE, 0, quieta)).astype(np.uint8)
         u = leer(os.path.join(RETOQUE, "%02d.png" % i), cv2.IMREAD_UNCHANGED)
         u[..., 3] = np.where(movil > 0, quieta, alfas[i])
         u[..., 3] = rehacer_remo(auto[i], u[..., 3], ejes[i])
@@ -515,6 +522,7 @@ def barco(carpeta, ult, tramos):
     cap = cv2.VideoCapture(os.path.join(ORIGEN, "secuencia.mp4"))
     k = 0
     rutas = []
+    lienzos = []
     while k <= RELEVO:
         ok, f = cap.read()
         if not ok:
@@ -589,6 +597,21 @@ def barco(carpeta, ult, tramos):
         guardar(os.path.join(RETOQUE, "_auto", nombre), auto)
         if not os.path.exists(os.path.join(RETOQUE, nombre)):
             guardar(os.path.join(RETOQUE, nombre), auto)
+        lienzos.append((nombre, rgba))
+        k += 1
+    # LO QUIETO DE ATRAS, QUIETO (2026-10-29, el usuario: la parte de atras, donde
+    # el remero, "sigue titilando, vibrando"): en la zona del remero, en cada
+    # fotograma, el px que se parece a lo de siempre en ese sitio (la mediana de
+    # todos: la cubierta, la popa, el cuerpo quieto del remero) se queda con eso;
+    # lo que es otra cosa de verdad (el remo que pasa por encima, los brazos)
+    # sigue con lo suyo
+    pila = np.stack([l[1] for l in lienzos])
+    mediana = np.median(pila[..., :3], 0)
+    zona = (zona_m[:CORTE - oy] > 0)[..., None]
+    for nombre, rgba in lienzos:
+        dif = np.abs(rgba[..., :3] - mediana).max(-1, keepdims=True)
+        w = np.clip(1 - (dif - COLOR_QUIETO) / COLOR_QUIETO, 0, 1) * zona
+        rgba[..., :3] = rgba[..., :3] * (1 - w) + mediana * w
         # (premultiplicado al reducir: sin orla oscura)
         rgba[..., :3] *= rgba[..., 3:] / 255.0
         r = cv2.resize(rgba, None, fx=REDUCE, fy=REDUCE, interpolation=cv2.INTER_AREA)
@@ -596,7 +619,6 @@ def barco(carpeta, ult, tramos):
         r[..., :3] = np.where(r[..., 3:] > 0.5, r[..., :3] / ar, 0)
         guardar(os.path.join(carpeta, nombre), np.clip(r, 0, 255).astype(np.uint8))
         rutas.append(RES + "barco/" + nombre)
-        k += 1
     return {
         # (el ultimo es el del RELEVO; en el juego van adelante y atras desde el)
         "fotogramas": rutas,
