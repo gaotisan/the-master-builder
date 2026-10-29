@@ -217,6 +217,18 @@ CANVAS_BARCO = (760, 380, 1320, 650)  # el barco suelto: px del video (la proa p
 # el remero de atras y su remo, por diferencia con el templo vacio encajado.
 REMO = 526
 ZONAS_REMO = [(840, 1000, 466, 600), (850, 916, 600, 628)]  # px del video en el RELEVO
+# LA ESPUMA (2026-10-29, el usuario: "que se vea un poco mas como se levanta
+# agua ... me da igual si lo sacas del video o no"): la del video es tan tenue
+# que recortada no se veia; la pinta el juego (barco_espuma.gdshader). Aqui solo
+# donde: la popa (donde empieza el casco), la proa y donde el remo entra en el
+# agua (px del video en el RELEVO), y en que fotogramas del remo salpica.
+ESPUMA_X = {"popa": 905, "proa": 1272, "remo": 895}
+SALPICA = (546, 556)
+# LOS RETOQUES A MANO (el usuario, en GIMP): barco_retoque/NN.png, a tamano del
+# video, con transparencia. Lo que se borre o se pinte ahi se queda aunque esto se
+# vuelva a pasar (se compara con _auto/, lo que salio sin tocar). Lo que se cambie
+# en el ultimo (el del relevo) fuera del remero de atras vale para todos.
+RETOQUE = os.path.join(ORIGEN, "barco_retoque")
 PROA_DESDE = 1262    # x del video desde donde manda la proa del PROA
 
 
@@ -338,6 +350,20 @@ def barco(carpeta, ult, tramos):
     for viejo in os.listdir(carpeta):
         if viejo.endswith(".png"):
             os.remove(os.path.join(carpeta, viejo))
+    os.makedirs(os.path.join(RETOQUE, "_auto"), exist_ok=True)
+
+    def retocado(nombre):
+        u, a = os.path.join(RETOQUE, nombre), os.path.join(RETOQUE, "_auto", nombre)
+        if not (os.path.exists(u) and os.path.exists(a)):
+            return None
+        ua = leer(u, cv2.IMREAD_UNCHANGED)[..., 3].astype(np.float32)
+        aa = leer(a, cv2.IMREAD_UNCHANGED)[..., 3].astype(np.float32)
+        return ua, np.abs(ua - aa) > 8
+    r_ultimo = retocado("%02d.png" % (RELEVO - REMO))
+    para_todos = None
+    if r_ultimo is not None:
+        para_todos = (r_ultimo[0], r_ultimo[1] & (movil[:CORTE - oy] == 0))
+
     cap = cv2.VideoCapture(os.path.join(ORIGEN, "secuencia.mp4"))
     k = 0
     rutas = []
@@ -395,12 +421,22 @@ def barco(carpeta, ult, tramos):
         rgba[:, fuera] = b[:, fuera]
         rgba = rgba[:CORTE - oy]
         rgba[..., :3] = igualar(np.clip(rgba[..., :3], 0, 255).astype(np.uint8), k, tramos)
+        nombre = "%02d.png" % (k - REMO)
+        # los retoques a mano
+        auto = np.clip(rgba, 0, 255).astype(np.uint8)
+        r_k = retocado(nombre)
+        if para_todos is not None:
+            rgba[..., 3] = np.where(para_todos[1], para_todos[0], rgba[..., 3])
+        if r_k is not None:
+            rgba[..., 3] = np.where(r_k[1], r_k[0], rgba[..., 3])
+        guardar(os.path.join(RETOQUE, "_auto", nombre), auto)
+        if not os.path.exists(os.path.join(RETOQUE, nombre)):
+            guardar(os.path.join(RETOQUE, nombre), auto)
         # (premultiplicado al reducir: sin orla oscura)
         rgba[..., :3] *= rgba[..., 3:] / 255.0
         r = cv2.resize(rgba, None, fx=REDUCE, fy=REDUCE, interpolation=cv2.INTER_AREA)
         ar = np.maximum(r[..., 3:] / 255.0, 1e-6)
         r[..., :3] = np.where(r[..., 3:] > 0.5, r[..., :3] / ar, 0)
-        nombre = "%02d.png" % (k - REMO)
         guardar(os.path.join(carpeta, nombre), np.clip(r, 0, 255).astype(np.uint8))
         rutas.append(RES + "barco/" + nombre)
         k += 1
@@ -412,6 +448,10 @@ def barco(carpeta, ult, tramos):
         "x": round(ox * REDUCE, 2), "y": round((oy - ARRIBA) * REDUCE, 2),
         "desde": d["fotograma"] / 24.0,
         "velocidad": round(POR_FOTOGRAMA * 24.0 * REDUCE, 2),
+        # px de la textura del barco; "linea": la del agua (su borde de abajo)
+        "espuma": {**{c: round((x - ox) * REDUCE, 2) for c, x in ESPUMA_X.items()},
+                   "linea": round((CORTE - oy) * REDUCE, 2),
+                   "salpica": [SALPICA[0] - REMO, SALPICA[1] - REMO]},
     }
 
 
