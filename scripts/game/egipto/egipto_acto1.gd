@@ -40,9 +40,14 @@ const TIRA := "res://assets/egipto/acto1/tira/tira.json"
 ## delante de las de la tira en la lista y quitan las de la tira que nombran.
 const CAPAS := "res://assets/egipto/acto1/capas/capas.json"
 ## La musica del acto (2026-10-28, del usuario: "Act I - Ancient Exploration",
-## en lugar del viento; sin el segundo de silencio del principio). En bucle: la
-## pista entra y se va en fundido, asi que vuelve a empezar sin corte.
-const MUSICA := preload("res://assets/audio/musica_egipto_acto1.ogg")
+## en lugar del viento; sin el segundo de silencio del principio). Al empezar
+## suena solo la intro en bucle (2026-10-29, tools/egipto/musica_bucle.py): el
+## fundido de entrada una vez y luego sus 3 compases desde MUSICA_BUCLE.
+const MUSICA := preload("res://assets/audio/musica_egipto_acto1_intro.ogg")
+const MUSICA_BUCLE := 4.819396
+## La pista completa, para cuando suba al altar y se anime el fondo (el cortejo
+## funebre y el rio).
+const MUSICA_COMPLETA := "res://assets/audio/musica_egipto_acto1.ogg"
 ## El zoom con el que las capas de la tira casan como en la imagen (las lejanas
 ## casi no siguen el zoom de la camara) y la camara de referencia (todas
 ## alineadas como en la imagen).
@@ -65,6 +70,11 @@ const ANDANDO := ["REPOSO", "ARRANQUE_ANDAR", "ANDAR", "PARADA_ANDAR", "ARRANQUE
 @export var rapidez_zoom := 1.0
 ## Zona muerta vertical: lo que puede cambiar la altura del suelo sin que la camara se mueva.
 @export var zona_muerta_y := 70.0
+@export var rapidez_y_caida := 7.0     # cayendo de un borde alto
+## El temblor de la camara al caer de alto (apagado 2026-10-29: "como si fuera un
+## golpe y temblara todo"; con el seguimiento de la camara basta). El del golpe
+## de la caida del cielo va aparte.
+@export var temblor_al_caer := false
 ## Escalones: velocidad a la que se lleva el nodo a la altura del peldano (px/s).
 @export var subida_peldano := 520.0
 ## Cinematicas (desactivables para probar el recorrido).
@@ -129,8 +139,9 @@ var _t_juego := 0.0
 ## peregrino mas grande frente a la maleza de la playa)
 @export var zoom_playa := 0.87
 ## los pies, hacia el 88 % de la pantalla: la arena justa, como en la imagen
-@export var pies_playa := 0.38
+@export var pies_playa := 0.42     # desde el centro (0,42: los pies a un 8 % del borde de abajo; 2026-10-28, con 0,38 sobraba arena)
 @export var pies_subido := 0.2      # (lo mismo a 900 px de altura o mas)
+@export var sombra_pies := false     # la sombra de contacto del peregrino (quitada 2026-10-28)
 @export var zoom_mirador := 0.68     # en lo alto del mirador (recorrido.json "mirador")
 @export var pies_mirador := 0.12
 
@@ -139,6 +150,10 @@ func _ready() -> void:
 	process_physics_priority = 20          # despues de las acciones (10): sus limites, y luego los del techo
 	_baston = BASTON.instantiate()
 	_peregrino.add_child(_baston)
+	# (el baston tambien en la caida del cielo: aparece al estamparse)
+	_baston.set("en_caida", true)
+	# (y a la espalda en la caida flotando de lo alto de las piedras)
+	_baston.set("en_flotar", true)
 	if x_prueba >= 0.0 or _acciones.solo_playa:
 		# (en la playa, sin la entrada de cine: con sus bandas negras parecia
 		# que el cielo estaba negro)
@@ -188,6 +203,10 @@ func _ready() -> void:
 	# (la referencia de las capas: donde arranca la camara)
 	TIRA_C0 = Vector2(_cam_pos.x, _cam_pos.y)
 	TIRA_ZOOM = _cam_zoom
+	if _solo_playa:
+		_montar_delante()
+	if _solo_playa and caida_inicio and not _acciones.recorrido.is_empty():
+		_caer_del_cielo()
 	_camara.position = _cam_pos
 	_camara.zoom = Vector2(_cam_zoom, _cam_zoom)
 	_camara.position_smoothing_enabled = false
@@ -222,6 +241,8 @@ func _physics_process(delta: float) -> void:
 		_peldanos(delta)
 		_mirador_si_toca()
 		_caidas()
+	elif _cayendo_del_cielo():
+		pass
 	elif not _acciones.recorrido.is_empty():
 		# (el recorrido de piedra: sus escalones y las caidas, la sombra de las
 		# repisas y el polvo)
@@ -229,6 +250,7 @@ func _physics_process(delta: float) -> void:
 		_caidas()
 		_sombra_repisas()
 		_polvo_recorrido()
+		_sol_peregrino()
 	_mover_camara(delta)
 	_mover_bandas(delta)
 	_mover_sombra()
@@ -318,9 +340,16 @@ func _mover_camara(delta: float) -> void:
 		var p := _peregrino
 		# el suelo que sigue, con zona muerta (escalones, saltos: el nodo se
 		# queda a la altura del despegue mientras vuela)
-		var dy := p.position.y - _y_ref
+		# (cayendo por debajo del despegue, los pies que se ven: el nodo se
+		# queda arriba y, de un borde alto, el peregrino salia por abajo de la
+		# pantalla antes de que bajara la camara)
+		var y_ve: float = p.position.y + maxf(float(p.get_node("Sprite").position.y), 0.0)
+		var dy := y_ve - _y_ref
+		if _cayendo_del_cielo():
+			# (cayendo del cielo, la camara espera en el suelo, donde va a caer)
+			dy = 0.0
 		if absf(dy) > zona_muerta_y:
-			_y_ref = p.position.y - signf(dy) * zona_muerta_y
+			_y_ref = y_ve - signf(dy) * zona_muerta_y
 		if _estado() == "REPOSO":
 			# quieto, se recentra despacio
 			_y_ref = move_toward(_y_ref, p.position.y, 140.0 * delta)
@@ -333,7 +362,10 @@ func _mover_camara(delta: float) -> void:
 		_cam_zoom = lerpf(_cam_zoom, zoom, 1.0 - exp(-rapidez_zoom * delta))
 		objetivo.x = _dentro_del_nivel(objetivo.x, _cam_zoom)
 		_cam_pos.x = lerpf(_cam_pos.x, objetivo.x, 1.0 - exp(-rapidez_x * delta))
-		_cam_pos.y = lerpf(_cam_pos.y, objetivo.y, 1.0 - exp(-rapidez_y * delta))
+		# (cayendo de alto, deprisa: con la de siempre llegaba al suelo pegado al
+		# borde de abajo)
+		var ry := rapidez_y_caida if y_ve > p.position.y + 120.0 else rapidez_y
+		_cam_pos.y = lerpf(_cam_pos.y, objetivo.y, 1.0 - exp(-ry * delta))
 	var temblor := Vector2.ZERO
 	if _temblor > 0.0:
 		_temblor = maxf(0.0, _temblor - delta)
@@ -371,7 +403,7 @@ func _caidas() -> void:
 		if is_nan(_y_despegue):
 			_y_despegue = _peregrino.position.y
 	elif not is_nan(_y_despegue):
-		if _peregrino.position.y - _y_despegue > 250.0:
+		if temblor_al_caer and _peregrino.position.y - _y_despegue > 250.0:
 			_temblor = 0.35
 		_y_despegue = NAN
 
@@ -558,16 +590,25 @@ func _montar_recorrido() -> void:
 		s.scale = Vector2(e, e)
 		# (lo que se pisa, a la altura de los pies: PLANTA, como los objetos)
 		s.position = Vector2(d["x"], suelo - _acciones.PLANTA - float(d["abajo"]) - float(d["alto"]))
+		s.z_index = int(d.get("z", 0))
 		# junto a la arena la piedra se oscurece y enfria (le llega menos cielo)
 		var m := ShaderMaterial.new()
 		m.shader = PIE_PIEDRA
 		var alto: float = d["alto"]
-		m.set_shader_parameter("suelo_uv", 1.0 + float(d["abajo"]) / alto)
+		m.set_shader_parameter("suelo_uv", 1.0 + (float(d["abajo"]) + BORDE_ARENA) / alto)
 		m.set_shader_parameter("banda_uv", PIE_BANDA / alto)
+		if relieve_repisas:
+			_cajas_en_uv(m, d, r["cajas"])
 		s.material = m
 		n.add_child(s)
 		_sombra_contacto(float(d["x"]), float(d["x"]) + float(d["ancho"]), suelo)
-	# las palomas posadas (se espantan al acercarse el peregrino)
+	_montar_adornos(r, suelo)
+	# las palomas posadas (se espantan al acercarse el peregrino), todas en un
+	# mismo estudio 3D (estudio_palomas.gd)
+	var estudio := EstudioPalomas.new()
+	estudio.name = "EstudioPalomas"
+	add_child(estudio)
+	var sueltas: Array = []
 	var i_pj := 0
 	for pj in r.get("pajaros", []):
 		var b := PajaroPosado.new()
@@ -577,17 +618,213 @@ func _montar_recorrido() -> void:
 		b.position = Vector2(float(pj["x"]), suelo - _acciones.PLANTA - float(pj["h"]))
 		b.sentido = float(pj["sentido"])
 		b.peregrino = _peregrino
+		b.estudio = estudio
 		b.z_index = -2
 		add_child(b)
+		sueltas.append(b)
+	# la bandada de la caida: comen a la derecha y se espantan con el golpe (bandada.gd)
+	if r.has("bandada"):
+		var bd := Bandada.new()
+		bd.name = "Bandada"
+		bd.peregrino = _peregrino
+		bd.estudio = estudio
+		bd.vecinas = sueltas
+		bd.z_index = -2
+		add_child(bd)
+		bd.montar(r["bandada"], suelo - _acciones.PLANTA)
 	# F3 ver lo que se pisa, F4 marcar un fallo (marcas_recorrido.gd)
 	var m := MarcasRecorrido.new()
 	m.acciones = _acciones
 	m.peregrino = _peregrino
 	add_child(m)
 
+## Los adornos del recorrido (recorrido.py, ADORNOS): por detras del peregrino;
+## los que nacen en lo alto de una repisa, ademas por detras de la piedra (les
+## tapa el pie). Las plantas y las enredaderas se mecen (vaiven.gdshader); lo
+## que esta delante de un muro en sombra, con su luz ("luz"); lo apoyado en la
+## piedra, con su sombra de contacto.
+func _montar_adornos(r: Dictionary, suelo: float) -> void:
+	var delante := Node2D.new()
+	delante.name = "Adornos"
+	delante.z_index = -5
+	var detras := Node2D.new()
+	detras.name = "AdornosDetras"
+	detras.z_index = -7
+	for n in [detras, delante]:
+		n.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		add_child(n)
+	for d in r.get("adornos", []):
+		var s := Sprite2D.new()
+		s.texture = load(d["tex"])
+		s.centered = false
+		s.flip_h = d["flip"]
+		if d.has("filas"):
+			# (solo lo de arriba: lo de abajo lo pone la enredadera)
+			s.region_enabled = true
+			s.region_rect = Rect2(0, 0, s.texture.get_width(), float(d["filas"]))
+		var e: float = d["escala"]
+		s.scale = Vector2(e, e)
+		s.position = Vector2(d["x"], suelo - _acciones.PLANTA - float(d["abajo"]) - float(d["alto"]))
+		if float(d["vaiven"]) > 0.0:
+			var m := ShaderMaterial.new()
+			m.shader = VAIVEN
+			m.set_shader_parameter("amplitud", float(d["vaiven"]))
+			m.set_shader_parameter("cuelga", d["ancla"] == "techo")
+			s.material = m
+		var k: float = d.get("luz", 1.0)
+		# (la sombra, algo azul: la llena el cielo, como la del peregrino)
+		s.modulate = Color(k, k * 1.01, minf(k * 1.08, 1.0))
+		if d.has("z"):
+			s.z_as_relative = false
+			s.z_index = int(d["z"])
+		var padre: Node2D = detras if d.get("detras", false) else delante
+		if d.get("sombra", false):
+			_sombra_apoyo(padre, s.position + Vector2(float(d["ancho"]) * 0.5, float(d["alto"])), float(d["ancho"]))
+		padre.add_child(s)
+
+const VAIVEN := preload("res://scripts/game/egipto/vaiven.gdshader")
+
+## La sombra de contacto de lo apoyado en la piedra: un ovalo difuso bajo el
+## pie, algo corrido a la derecha (el sol viene de arriba a la izquierda).
+func _sombra_apoyo(padre: Node, pie: Vector2, ancho: float) -> void:
+	var s := Sprite2D.new()
+	s.texture = _mota()
+	s.modulate = Color(0.14, 0.12, 0.18, 0.5)
+	s.scale = Vector2(ancho * 0.95 / 32.0, 22.0 / 32.0)
+	s.position = pie + Vector2(ancho * 0.08, -4.0)
+	padre.add_child(s)
+
+## EL PRIMER PLANO (recorrido.py, DELANTE): en su CanvasLayer por encima de todo,
+## con mas paralaje que el juego (DELANTE_P): pasa mas deprisa y, al subir, se
+## hunde por abajo. Despues de fijar TIRA_C0 (su sitio se cuenta desde ahi).
+const DELANTE_P := Vector2(1.3, 1.2)
+const DELANTE_BAJO := 140.0       # px de juego por debajo de los pies en la arena
+
+func _montar_delante() -> void:
+	var r: Dictionary = _acciones.recorrido
+	if r.get("delante", []).is_empty():
+		return
+	var capa := CanvasLayer.new()
+	capa.layer = 2
+	capa.name = "Delante"
+	add_child(capa)
+	var pies: float = float(nivel["suelo"]) - _acciones.PLANTA
+	for d in r["delante"]:
+		var s := Sprite2D.new()
+		s.texture = load(d["tex"])
+		s.centered = false
+		s.flip_h = d["flip"]
+		s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		var e: float = d["escala"]
+		s.scale = Vector2(e, e)
+		var lx: float = TIRA_C0.x + DELANTE_P.x * (float(d["x"]) - TIRA_C0.x)
+		var ly: float = TIRA_C0.y + DELANTE_P.y * (pies + DELANTE_BAJO - TIRA_C0.y)
+		s.position = Vector2(lx - float(d["ancho"]) * 0.5, ly - float(d["alto"]))
+		capa.add_child(s)
+	_tira_capas.append([capa, DELANTE_P.x, DELANTE_P.y, 0.0])
+
+## ---- la caida del cielo ---------------------------------------------------------
+
+## LA CAIDA DEL CIELO (2026-10-28, el usuario: "que caiga del cielo como en la
+## escena de la hojarasca"): la cinematica del peregrino (caer_desde_arriba: cae,
+## se estampa, se queda tumbado y se levanta). Mientras dura, la camara espera en
+## el suelo. Cae en HOJAS (hojas_portal.gd: las que trae el portal, el usuario:
+## "siempre que cae, mejor hojas"); antes, un monton de arena con arena que
+## saltaba por codigo: "cutrisimo, parece que no es arena".
+@export var caida_inicio := true
+## En que cae: "arena" (arena_portal.gd) u "hojas" (hojas_portal.gd).
+@export var caida_en := "arena"
+## (sin monton de primer plano: el usuario, 2026-10-28, "no metas en primer
+## plano, las de la izquierda diria que sobran"; hojas_portal.gd conserva
+## primer_plano() por si vuelve)
+const CINEMATICA := ["CAYENDO", "CAIDA", "TUMBADO", "LEVANTARSE"]
+var _hojas: HojasPortal
+
+func _cayendo_del_cielo() -> bool:
+	return _estado() in CINEMATICA
+
+func _caer_del_cielo() -> void:
+	var suelo := float(nivel["suelo"])
+	if caida_en == "arena":
+		# (2026-10-28: en un monton de arena, arena_portal.gd; hojas_portal.gd
+		# queda por si vuelven las hojas: caida_en = "hojas")
+		var a := ArenaPortal.new()
+		a.name = "ArenaPortal"
+		a.peregrino = _peregrino
+		a.temblor = func(s: float) -> void: _temblor = s
+		add_child(a)
+		a.montar(_peregrino.position.x, suelo)
+		_peregrino.caer_desde_arriba()
+		return
+	_hojas = HojasPortal.new()
+	_hojas.name = "HojasPortal"
+	_hojas.peregrino = _peregrino
+	add_child(_hojas)
+	# (hasta las piedras de los lados: la losa de la izquierda y la base del templo)
+	var izq := -INF
+	var der := INF
+	var x := _peregrino.position.x
+	for c in _acciones.recorrido.get("cajas", []):
+		if float(c["x1"]) <= x:
+			izq = maxf(izq, float(c["x1"]))
+		elif float(c["x0"]) >= x:
+			der = minf(der, float(c["x0"]))
+	_hojas.montar(x, suelo, izq, der, _arena_delante, BORDE_ARENA + 16.0)
+	_peregrino.impacto.connect(func() -> void: _temblor = 0.4)
+	_peregrino.caer_desde_arriba()
+
+## LO QUE SE PISA, A LA VISTA (pie_piedra.gdshader): las cajas de la pieza
+## (las de su textura) en UV, con el alto del canto que se ve bajo la cara de
+## arriba (CANTO px de juego, o hasta su cara de abajo si es una losa).
+@export var relieve_repisas := true
+const CANTO := 60.0
+
+func _cajas_en_uv(m: ShaderMaterial, d: Dictionary, cajas: Array) -> void:
+	var pieza := String(d["tex"]).get_file().get_basename()
+	var ancho: float = d["ancho"]
+	var alto: float = d["alto"]
+	var lista: Array[Vector4] = []
+	for c in cajas:
+		if String(c["pieza"]) != pieza or lista.size() >= 24:
+			continue
+		var arriba: float = c["arriba"]
+		var canto: float = CANTO
+		if float(c["abajo"]) > 0.0:
+			canto = minf(canto, arriba - float(c["abajo"]))
+		lista.append(Vector4((float(c["x0"]) - float(d["x"])) / ancho, (float(c["x1"]) - float(d["x"])) / ancho,
+				(alto + float(d["abajo"]) - arriba) / alto, canto / alto))
+	m.set_shader_parameter("cajas", lista)
+	m.set_shader_parameter("n_cajas", lista.size())
+	m.set_shader_parameter("filo_uv", 10.0 / alto)
+	m.set_shader_parameter("canto_suave", 18.0 / alto)
+
+## EL SOL EN EL PEREGRINO (sol_peregrino.gdshader): el borde de luz del lado del
+## sol, que en el mundo esta siempre arriba a la izquierda (con flip_h, en la
+## textura, al otro lado).
+var _sol: ShaderMaterial
+
+func _sol_peregrino() -> void:
+	var sp := _peregrino.get_node("Sprite") as AnimatedSprite2D
+	if sp.material == null:
+		_sol = ShaderMaterial.new()
+		_sol.shader = preload("res://scripts/game/egipto/sol_peregrino.gdshader")
+		sp.material = _sol
+	if _sol:
+		_sol.set_shader_parameter("sol_tex", Vector2(0.75 if sp.flip_h else -0.75, -0.65))
+
 ## La piedra del recorrido junto a la arena: mas oscura y mas fria en los
 ## PIE_BANDA px de abajo (la luz que rebota del cielo no llega).
-const PIE_BANDA := 110.0
+const PIE_BANDA := 55.0
+## Donde la arena de delante corta las piezas: px por debajo de los pies (su
+## borde nitido, borde_arena.gdshader: fila ~21 de la rampa de capas.py a escala
+## 1,2, desde y 19,9).
+## (2026-10-28: la arena de delante sube ARENA_SUBE px con el recorrido; cortaba
+## las piedras 46 px por debajo de los pies y el peregrino parecia ir por detras
+## de ellas, el usuario: "si has adelantado la linea de las piedras, tienes que
+## adelantar las hojas y el peregrino")
+const ARENA_SUBE := 34.0
+const BORDE_ARENA := 46.0 - ARENA_SUBE
+const BORDE_ARENA_SHADER := preload("res://scripts/game/egipto/borde_arena.gdshader")
 const PIE_PIEDRA := preload("res://scripts/game/egipto/pie_piedra.gdshader")
 
 ## La sombra de contacto de una pieza en la arena de delante (por delante de la
@@ -602,13 +839,15 @@ func _sombra_contacto(x0: float, x1: float, suelo: float) -> void:
 				var v := float(y) / 31.0
 				var u := float(x) / 127.0
 				var borde := clampf(minf(u, 1.0 - u) / 0.06, 0.0, 1.0)
-				im.set_pixel(x, y, Color(0.16, 0.13, 0.15, 0.42 * pow(1.0 - v, 1.6) * borde))
+				im.set_pixel(x, y, Color(0.14, 0.11, 0.12, 0.55 * pow(1.0 - v, 2.2) * borde))
 		_tex_contacto = ImageTexture.create_from_image(im)
 	var s := Sprite2D.new()
 	s.texture = _tex_contacto
 	s.centered = false
-	s.position = Vector2(x0 - 30.0, suelo + 14.0)
-	s.scale = Vector2((x1 - x0 + 60.0) / 128.0, 70.0 / 32.0)
+	# (justo donde la arena corta la piedra, corta y nitida: antes 70 px difusos
+	# sobre la rampa de la arena)
+	s.position = Vector2(x0 - 12.0, suelo + BORDE_ARENA - 2.0)
+	s.scale = Vector2((x1 - x0 + 24.0) / 128.0, 26.0 / 32.0)
 	_arena_delante.add_child(s)
 
 ## ---- la luz y el polvo del recorrido ---------------------------------------------
@@ -845,10 +1084,26 @@ func _montar_tira() -> void:
 				s.material = agua_mat
 			elif c.get("viento", false):
 				s.material = _material_orilla(String(tr["tex"]), float(c.get("costa", 0.5)))
+			elif c.get("delante", false):
+				var bm := ShaderMaterial.new()
+				bm.shader = BORDE_ARENA_SHADER
+				s.material = bm
+			elif String(c["nombre"]) == "arena" and _solo_playa and not _acciones.recorrido.is_empty():
+				# (la arena de detras, a la altura del suelo: sin las sombras azules
+				# de palmera, que asomaban entre las piedras como agua)
+				var bm := ShaderMaterial.new()
+				bm.shader = BORDE_ARENA_SHADER
+				var alto_t: float = (load(tr["tex"]) as Texture2D).get_height() * float(c.get("escala", e))
+				var v0: float = (float(nivel["suelo"]) - 160.0 - float(tr["y"])) / alto_t
+				var v1: float = (float(nivel["suelo"]) + 140.0 - float(tr["y"])) / alto_t
+				bm.set_shader_parameter("franja", Vector2(v0, v1))
+				s.material = bm
 			s.centered = false
 			var ec: float = c.get("escala", e)
 			s.scale = Vector2(ec, ec)
 			s.position = Vector2(tr["x"], tr["y"])
+			if c.get("delante", false) and _solo_playa and FileAccess.file_exists(_acciones.RECORRIDO):
+				s.position.y -= ARENA_SUBE
 			s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 			capa.add_child(s)
 		_tira_capas.append([capa, float(c["p"]), float(c["py"]), float(c.get("deriva", 0.0))])
@@ -885,6 +1140,7 @@ func _musica() -> void:
 	WindAmbience.fade_to(MusicAmbience.SILENCIO, 0.0)
 	var pista := MUSICA.duplicate() as AudioStreamOggVorbis
 	pista.loop = true
+	pista.loop_offset = MUSICA_BUCLE
 	var p := AudioStreamPlayer.new()
 	p.stream = pista
 	p.volume_db = MusicAmbience.SILENCIO
@@ -1138,6 +1394,9 @@ func _luz_y_aire() -> void:
 	_sombra.texture = tex
 	_sombra.scale = Vector2(1.5, 0.22)
 	_sombra.z_index = -1
+	# (2026-10-28, el usuario: la sombra de los pies "no me gusta mucho": fuera;
+	# se queda el codigo por si vuelve)
+	_sombra.visible = false
 	add_child(_sombra)
 	# polvo en suspension alrededor de la camara, muy poco
 	_polvo = CPUParticles2D.new()
@@ -1174,7 +1433,7 @@ func _mover_sombra() -> void:
 	_sombra.modulate.a = (1.0 - alto) * _luz_peregrino
 	var e := 1.5 * (1.0 - 0.4 * alto)
 	_sombra.scale = Vector2(e, 0.22 * (1.0 - 0.4 * alto))
-	_sombra.visible = _estado() != "TUMBADO"
+	_sombra.visible = sombra_pies and _estado() != "TUMBADO"
 
 ## ---- boceto en gris (sin arte) ---------------------------------------------------
 

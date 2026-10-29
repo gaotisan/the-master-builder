@@ -1,7 +1,7 @@
 {
  "escala": 1.2,
  "x0": -800.0,
- "ancho": 20233.199999999997,
+ "ancho": 20233.2,
  "quita": [
   "cielo",
   "ciudad",
@@ -33,7 +33,7 @@
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_cielo_3.png",
-     "x": 6572.8,
+     "x": 6572.799999999999,
      "y": -2478.5
     },
     {
@@ -48,7 +48,7 @@
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_cielo_6.png",
-     "x": 13945.6,
+     "x": 13945.599999999999,
      "y": -2478.5
     },
     {
@@ -69,10 +69,10 @@
    "py": 0.25,
    "escala": 1.2,
    "agua": [
-    0.5066026410564226,
+    0.5906362545018007,
     1.0
    ],
-   "costa": 0.5066026410564226,
+   "costa": 0.5906362545018007,
    "trozos": [
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_0.png",
@@ -91,7 +91,7 @@
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_3.png",
-     "x": 6572.8,
+     "x": 6572.799999999999,
      "y": -2478.5
     },
     {
@@ -106,7 +106,7 @@
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_6.png",
-     "x": 13945.6,
+     "x": 13945.599999999999,
      "y": -2478.5
     },
     {
@@ -126,6 +126,10 @@
    "p": 0.55,
    "py": 0.32,
    "escala": 1.2,
+   "costa": 0.5098039215686274,
+   "calima": 0.12,
+   "calima_alto": 300.0,
+   "viento": true,
    "trozos": [
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_0.png",
@@ -144,7 +148,7 @@
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_3.png",
-     "x": 6572.8,
+     "x": 6572.799999999999,
      "y": -1758.5
     },
     {
@@ -159,7 +163,7 @@
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_6.png",
-     "x": 13945.6,
+     "x": 13945.599999999999,
      "y": -1758.5
     },
     {
@@ -167,11 +171,7 @@
      "x": 16403.2,
      "y": -1758.5
     }
-   ],
-   "costa": 0.508578431372549,
-   "calima": 0.12,
-   "calima_alto": 300.0,
-   "viento": true
+   ]
   },
   {
    "nombre": "arena",
@@ -195,7 +195,7 @@
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_3.png",
-     "x": 6572.8,
+     "x": 6572.799999999999,
      "y": -1758.5
     },
     {
@@ -210,7 +210,7 @@
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_6.png",
-     "x": 13945.6,
+     "x": 13945.599999999999,
      "y": -1758.5
     },
     {
@@ -243,7 +243,7 @@
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_delante_3.png",
-     "x": 6572.8,
+     "x": 6572.799999999999,
      "y": 19.9
     },
     {
@@ -258,7 +258,7 @@
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_delante_6.png",
-     "x": 13945.6,
+     "x": 13945.599999999999,
      "y": 19.9
     },
     {
@@ -267,81 +267,6 @@
      "y": 19.9
     }
    ]
-  }
- ],
- "barcos": {
-  "tras": "orilla",
-  "p": 0.68,
-  "py": 0.42,
-  "y0": -636.0,
-  "y1": -156.0,
-  "x0": -800.0,
-  "x1": 10442.105263157893,
-  "cuantos": 3,
-  "prof": [
-   0.0,
-   0.4
-  ],
-  "alto": [
-   55.0,
-   120.0
-  ],
-  "rapidez": [
-   4.0,
-   9.0
-  ]
- },
- "fin_suelo": 18544.0,
- "naves": [
-  {
-   "capa": "ciudad",
-   "x": 916.0,
-   "y": -1254.5,
-   "ancho": 60.0,
-   "sentido": -1.0,
-   "estado": "posada",
-   "espera": 12.0,
-   "aire": 0.28
-  },
-  {
-   "capa": "ciudad",
-   "x": 1078.0,
-   "y": -1261.7,
-   "ancho": 60.0,
-   "sentido": 1.0,
-   "estado": "posada",
-   "espera": 45.0,
-   "aire": 0.28
-  },
-  {
-   "capa": "ciudad",
-   "x": 1318.0,
-   "y": -1262.9,
-   "ancho": 60.0,
-   "sentido": 1.0,
-   "estado": "fuera",
-   "espera": 6.0,
-   "aire": 0.28
-  },
-  {
-   "capa": "ciudad",
-   "x": -404.0,
-   "y": -1124.9,
-   "ancho": 44.0,
-   "sentido": 1.0,
-   "estado": "posada",
-   "espera": 70.0,
-   "aire": 0.36
-  },
-  {
-   "capa": "ciudad",
-   "x": 184.0,
-   "y": -1024.1,
-   "ancho": 38.0,
-   "sentido": -1.0,
-   "estado": "fuera",
-   "espera": 30.0,
-   "aire": 0.36
   }
  ],
  "silueta": {
@@ -2457,5 +2382,80 @@
    -971.3,
    -973.7
   ]
- }
+ },
+ "barcos": {
+  "tras": "orilla",
+  "cuantos": 3,
+  "prof": [
+   0.0,
+   0.4
+  ],
+  "alto": [
+   55.0,
+   120.0
+  ],
+  "rapidez": [
+   4.0,
+   9.0
+  ],
+  "p": 0.68,
+  "py": 0.42,
+  "y0": -636.0,
+  "y1": -156.0,
+  "x0": -800.0,
+  "x1": 10442.105263157893
+ },
+ "naves": [
+  {
+   "capa": "ciudad",
+   "x": 916.0,
+   "y": -1254.5,
+   "ancho": 60.0,
+   "aire": 0.28,
+   "sentido": -1.0,
+   "estado": "posada",
+   "espera": 12.0
+  },
+  {
+   "capa": "ciudad",
+   "x": 1078.0,
+   "y": -1261.7,
+   "ancho": 60.0,
+   "aire": 0.28,
+   "sentido": 1.0,
+   "estado": "posada",
+   "espera": 45.0
+  },
+  {
+   "capa": "ciudad",
+   "x": 1318.0,
+   "y": -1262.9,
+   "ancho": 60.0,
+   "aire": 0.28,
+   "sentido": 1.0,
+   "estado": "fuera",
+   "espera": 6.0
+  },
+  {
+   "capa": "ciudad",
+   "x": -404.0,
+   "y": -1124.9,
+   "ancho": 44.0,
+   "aire": 0.36,
+   "sentido": 1.0,
+   "estado": "posada",
+   "espera": 70.0
+  },
+  {
+   "capa": "ciudad",
+   "x": -80.0,
+   "y": -1021.7,
+   "ancho": 38.0,
+   "aire": 0.36,
+   "sentido": -1.0,
+   "estado": "fuera",
+   "espera": 30.0
+  }
+ ],
+ "fin_suelo": 18544.0
 }

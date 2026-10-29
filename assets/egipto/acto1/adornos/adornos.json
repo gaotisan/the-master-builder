@@ -1,0 +1,456 @@
+{
+ "plantas_a_0": [
+  350,
+  292
+ ],
+ "plantas_a_1": [
+  301,
+  340
+ ],
+ "plantas_a_2": [
+  439,
+  228
+ ],
+ "plantas_a_3": [
+  373,
+  567
+ ],
+ "plantas_a_4": [
+  439,
+  264
+ ],
+ "plantas_a_5": [
+  330,
+  387
+ ],
+ "plantas_a_6": [
+  450,
+  381
+ ],
+ "plantas_a_7": [
+  343,
+  179
+ ],
+ "plantas_b_0": [
+  361,
+  428
+ ],
+ "plantas_b_1": [
+  412,
+  376
+ ],
+ "plantas_b_2": [
+  438,
+  424
+ ],
+ "plantas_b_3": [
+  306,
+  556
+ ],
+ "plantas_b_4": [
+  407,
+  273
+ ],
+ "plantas_b_5": [
+  368,
+  306
+ ],
+ "plantas_b_6": [
+  360,
+  336
+ ],
+ "plantas_b_7": [
+  358,
+  325
+ ],
+ "colgantes_a_0_arriba": [
+  243,
+  123
+ ],
+ "colgantes_a_0": [
+  243,
+  355
+ ],
+ "colgantes_a_1": [
+  235,
+  476
+ ],
+ "colgantes_a_2_arriba": [
+  204,
+  118
+ ],
+ "colgantes_a_2": [
+  204,
+  351
+ ],
+ "colgantes_a_3": [
+  231,
+  478
+ ],
+ "colgantes_a_4": [
+  162,
+  479
+ ],
+ "colgantes_a_5": [
+  233,
+  482
+ ],
+ "colgantes_a_6": [
+  263,
+  478
+ ],
+ "colgantes_a_7": [
+  238,
+  473
+ ],
+ "colgantes_a_8_arriba": [
+  214,
+  100
+ ],
+ "colgantes_a_8": [
+  214,
+  375
+ ],
+ "colgantes_a_9": [
+  215,
+  435
+ ],
+ "colgantes_a_10": [
+  176,
+  478
+ ],
+ "colgantes_a_11": [
+  238,
+  480
+ ],
+ "colgantes_b_0_arriba": [
+  209,
+  120
+ ],
+ "colgantes_b_0": [
+  209,
+  696
+ ],
+ "colgantes_b_1_arriba": [
+  208,
+  120
+ ],
+ "colgantes_b_1": [
+  208,
+  680
+ ],
+ "colgantes_b_2_arriba": [
+  173,
+  100
+ ],
+ "colgantes_b_2": [
+  173,
+  547
+ ],
+ "colgantes_b_3_arriba": [
+  136,
+  50
+ ],
+ "colgantes_b_3": [
+  136,
+  830
+ ],
+ "colgantes_b_4": [
+  331,
+  907
+ ],
+ "colgantes_b_5": [
+  317,
+  731
+ ],
+ "arena_a_0": [
+  591,
+  266
+ ],
+ "arena_a_1": [
+  738,
+  127
+ ],
+ "arena_a_2": [
+  374,
+  114
+ ],
+ "arena_a_3": [
+  328,
+  78
+ ],
+ "arena_a_4": [
+  897,
+  121
+ ],
+ "arena_a_5": [
+  488,
+  250
+ ],
+ "arena_a_6": [
+  696,
+  221
+ ],
+ "arena_b_0": [
+  537,
+  294
+ ],
+ "arena_b_1": [
+  481,
+  161
+ ],
+ "arena_b_2": [
+  555,
+  169
+ ],
+ "arena_b_3": [
+  531,
+  81
+ ],
+ "arena_b_4": [
+  385,
+  193
+ ],
+ "arena_b_5": [
+  395,
+  83
+ ],
+ "arena_b_6": [
+  474,
+  106
+ ],
+ "arena_b_7": [
+  496,
+  111
+ ],
+ "arena_b_8": [
+  484,
+  187
+ ],
+ "atrezzo_a_0": [
+  342,
+  349
+ ],
+ "atrezzo_a_1": [
+  204,
+  402
+ ],
+ "atrezzo_a_2": [
+  449,
+  211
+ ],
+ "atrezzo_a_3": [
+  395,
+  287
+ ],
+ "atrezzo_a_4": [
+  259,
+  381
+ ],
+ "atrezzo_a_5": [
+  446,
+  334
+ ],
+ "atrezzo_a_6": [
+  545,
+  234
+ ],
+ "atrezzo_a_7": [
+  290,
+  227
+ ],
+ "atrezzo_b_0": [
+  229,
+  401
+ ],
+ "atrezzo_b_1": [
+  822,
+  378
+ ],
+ "atrezzo_b_2": [
+  162,
+  377
+ ],
+ "atrezzo_b_3": [
+  287,
+  361
+ ],
+ "atrezzo_b_4": [
+  409,
+  144
+ ],
+ "atrezzo_b_5": [
+  236,
+  188
+ ],
+ "atrezzo_b_6": [
+  284,
+  197
+ ],
+ "atrezzo_b_7": [
+  318,
+  163
+ ],
+ "atrezzo_b_8": [
+  268,
+  195
+ ],
+ "atrezzo_b_9": [
+  366,
+  217
+ ],
+ "atrezzo_b_10": [
+  129,
+  278
+ ],
+ "atrezzo_b_11": [
+  189,
+  201
+ ],
+ "atrezzo_b_12": [
+  830,
+  272
+ ],
+ "delante_a_0": [
+  242,
+  266
+ ],
+ "delante_a_1": [
+  198,
+  222
+ ],
+ "delante_a_2": [
+  376,
+  852
+ ],
+ "delante_a_3": [
+  482,
+  477
+ ],
+ "delante_a_4": [
+  481,
+  341
+ ],
+ "delante_a_5": [
+  390,
+  808
+ ],
+ "delante_b_0": [
+  790,
+  842
+ ],
+ "delante_b_1": [
+  438,
+  506
+ ],
+ "delante_b_2": [
+  388,
+  630
+ ],
+ "delante_b_3": [
+  439,
+  581
+ ],
+ "delante_c_0": [
+  430,
+  836
+ ],
+ "delante_c_1": [
+  418,
+  565
+ ],
+ "delante_c_2": [
+  463,
+  791
+ ],
+ "delante_c_3": [
+  435,
+  661
+ ],
+ "arena_dunas_a_0": [
+  2058,
+  96
+ ],
+ "arena_dunas_a_1": [
+  928,
+  139
+ ],
+ "arena_dunas_a_2": [
+  877,
+  137
+ ],
+ "arena_dunas_a_3": [
+  602,
+  221
+ ],
+ "arena_dunas_a_4": [
+  380,
+  59
+ ],
+ "arena_dunas_a_5": [
+  305,
+  47
+ ],
+ "arena_dunas_a_6": [
+  660,
+  25
+ ],
+ "arena_dunas_b_0": [
+  2057,
+  77
+ ],
+ "arena_dunas_b_1": [
+  1103,
+  128
+ ],
+ "arena_dunas_b_2": [
+  832,
+  129
+ ],
+ "arena_dunas_b_3": [
+  600,
+  236
+ ],
+ "arena_dunas_b_4": [
+  339,
+  61
+ ],
+ "arena_dunas_b_5": [
+  403,
+  53
+ ],
+ "arena_dunas_b_6": [
+  650,
+  31
+ ],
+ "_colgar": {
+  "colgantes_a_0": {
+   "piedra": 36,
+   "corte": 123
+  },
+  "colgantes_a_2": {
+   "piedra": 21,
+   "corte": 118
+  },
+  "colgantes_a_8": {
+   "piedra": 28,
+   "corte": 100
+  },
+  "colgantes_b_0": {
+   "piedra": 22,
+   "corte": 120
+  },
+  "colgantes_b_1": {
+   "piedra": 23,
+   "corte": 120
+  },
+  "colgantes_b_2": {
+   "piedra": 17,
+   "corte": 100
+  },
+  "colgantes_b_3": {
+   "piedra": 2,
+   "corte": 50
+  }
+ }
+}

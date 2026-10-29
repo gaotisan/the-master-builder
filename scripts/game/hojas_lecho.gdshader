@@ -6,6 +6,11 @@ shader_type canvas_item;
 // la luz entera (1) a la del claro a oscuras (0), sin repintar ninguna hoja.
 
 uniform float luz_viva : hint_range(0.0, 1.0) = 1.0;
+// EL VIRAJE (2026-10-28, las hojas del portal en Egipto: "tan amarillas quedan
+// feas"): cuanto se apagan hacia gris y el tinte que les queda. Por defecto
+// nada (la hojarasca, igual).
+uniform float desatura = 0.0;
+uniform vec3 tinte = vec3(1.0);
 
 varying vec4 color_hoja;
 varying float oscura;
@@ -20,5 +25,8 @@ void vertex() {
 
 void fragment() {
 	vec4 t = texture(TEXTURE, UV);
-	COLOR = vec4(t.rgb * color_hoja.rgb * mix(oscura, 1.0, luz_viva), t.a * color_hoja.a);
+	vec3 c = t.rgb * color_hoja.rgb * mix(oscura, 1.0, luz_viva);
+	float l = dot(c, vec3(0.299, 0.587, 0.114));
+	c = mix(c, vec3(l), desatura) * tinte;
+	COLOR = vec4(c, t.a * color_hoja.a);
 }

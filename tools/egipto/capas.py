@@ -487,15 +487,19 @@ def mascara_orilla(img, y_agua):
 # imagenes con el cielo crema dorado y queda mucho mas amarilla y oscura que la
 # ciudad del fondo (Lab b 153 contra 135, L 97 contra 150): se le quita casi todo
 # el amarillo de mas y se aclara un poco (mas cerca, puede ser algo mas oscura)
-LUZ_ORILLA = {"dL": 12.0, "db": -11.0, "da": 0.0, "contraste": 0.8}
+# (2026-10-29: a la mitad, "hemos perdido detalle en lo amarillo"; antes
+# dL 12, db -11, contraste 0.8 y aire 0.12; ciudad dL 8, db -8, contraste 0.62, aire 0.28)
+# (y 2026-10-29, "calidos, no naranjas": menos croma y menos rojo, la piedra
+# color arena; el relieve, el de la bruma a la mitad)
+LUZ_ORILLA = {"dL": 6.0, "db": -5.0, "da": -2.0, "contraste": 0.9, "croma": 0.85}
 # EL AIRE: lo lejano se mezcla con el color del cielo del horizonte
-AIRE_CIUDAD = 0.28
-AIRE_ORILLA = 0.12
+AIRE_CIUDAD = 0.16
+AIRE_ORILLA = 0.08
 # EL ESCALONADO DE LOS PLANOS (2026-10-27, comparado con las composiciones que
 # gustan: lejos palido, plano y algo frio, contraste ~27; delante oscuro y con
 # contraste ~65. Aqui estaba al reves: la ciudad con 45 y la playa, lo mas
 # cercano, la mas plana (31) y la mas naranja)
-LUZ_CIUDAD = {"dL": 8.0, "db": -8.0, "da": 0.0, "contraste": 0.62}
+LUZ_CIUDAD = {"dL": 6.0, "db": 0.0, "da": -4.0, "contraste": 0.8, "croma": 0.75}
 LUZ_ARENA = {"dL": -10.0, "db": -10.0, "da": -2.0, "contraste": 1.35}
 HORIZONTE = None        # (lo pone lejos(): el color del aire)
 SILUETA = None          # (lo pone lejos(): la silueta de montanas y ciudad, para la lluvia)
@@ -507,17 +511,22 @@ LINEA_ORILLA = None     # (y por columna)
 NAVES = [((1430, 420), -1.0, "posada", 12.0, 60.0), ((1565, 414), 1.0, "posada", 45.0, 60.0),
          ((1765, 413), 1.0, "fuera", 6.0, 60.0),
          # (y en los edificios iguales del principio, mas lejos: mas pequenas)
-         ((330, 528), 1.0, "posada", 70.0, 44.0), ((820, 612), -1.0, "fuera", 30.0, 38.0)]
+         ((330, 528), 1.0, "posada", 70.0, 44.0),
+         # (la pequena que llega: en la azotea a la izquierda de la piramide
+         # pequena; antes en la de la derecha, con una palmera de la orilla por
+         # delante: "aterriza encima de una palmera", 2026-10-28)
+         ((600, 614), -1.0, "fuera", 30.0, 38.0)]
 
 
-def igualar_luz(bgra, dL=0.0, da=0.0, db=0.0, contraste=1.0):
-    """Corrige la luz de una capa recortada en Lab (solo el color, el alfa igual)."""
+def igualar_luz(bgra, dL=0.0, da=0.0, db=0.0, contraste=1.0, croma=1.0):
+    """Corrige la luz de una capa recortada en Lab (solo el color, el alfa igual);
+    croma < 1 apaga el color hacia el gris."""
     lab = cv2.cvtColor(bgra[..., :3], cv2.COLOR_BGR2LAB).astype(np.float32)
     m = bgra[..., 3] > 128
     media = lab[m].mean(0) if m.any() else lab.reshape(-1, 3).mean(0)
     lab[..., 0] = (lab[..., 0] - media[0]) * contraste + media[0] + dL
-    lab[..., 1] += da
-    lab[..., 2] += db
+    lab[..., 1] = 128.0 + (lab[..., 1] - 128.0) * croma + da
+    lab[..., 2] = 128.0 + (lab[..., 2] - 128.0) * croma + db
     out = cv2.cvtColor(np.clip(lab, 0, 255).astype(np.uint8), cv2.COLOR_LAB2BGR)
     return np.dstack([out, bgra[..., 3]])
 

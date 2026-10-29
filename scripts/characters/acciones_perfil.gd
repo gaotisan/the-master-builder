@@ -114,6 +114,14 @@ const PLANTA := 6.5
 @export var subida_mediana := 172.0
 @export var subida_alta := 362.0
 @export var margen_altura := 0.3
+## O las alturas que se trepan con cada video, fijas (px de juego, de-hasta;
+## x < 0: las de arriba con margen_altura). Egipto las fija: fuera de ellas las
+## manos no casan con el borde (ver retoque_templo.py).
+@export var banda_mediana := Vector2(-1.0, -1.0)
+@export var banda_alta := Vector2(-1.0, -1.0)
+## La parte de la subida del video alto en que las manos llegan al borde (del
+## fotograma 24 al 28 de trepar: 0,13-0,20).
+const AGARRE_ALTO := 0.15
 ## La argolla del sillar alto: altura de su centro sobre el suelo (0,45 del alto
 ## del peregrino, la de la referencia de tirar).
 @export var altura_argolla := 141.0
@@ -370,6 +378,12 @@ func _baston_encima() -> bool:
 func _estado() -> String:
 	return _peregrino.datos_movimiento()["estado"]
 
+## Si la altura h se trepa con el video de esa banda (o de esa altura de video).
+func _en_banda(h: float, banda: Vector2, video: float) -> bool:
+	if banda.x >= 0.0:
+		return h >= banda.x and h <= banda.y
+	return absf(h / video - 1.0) <= margen_altura
+
 ## Que accion empieza en esa cara o borde y desde donde (el nodo, en x).
 func _accion_en(sig: Dictionary, y: float, d: float) -> Dictionary:
 	if sig.is_empty():
@@ -378,9 +392,9 @@ func _accion_en(sig: Dictionary, y: float, d: float) -> Dictionary:
 	var o: Objeto = sig["objeto"]
 	if h > 0.0:
 		var anim := ""
-		if o.trepable and absf(h / subida_mediana - 1.0) <= margen_altura:
+		if o.trepable and _en_banda(h, banda_mediana, subida_mediana):
 			anim = "trepar_mediano"
-		elif o.trepable and absf(h / subida_alta - 1.0) <= margen_altura:
+		elif o.trepable and _en_banda(h, banda_alta, subida_alta):
 			anim = "trepar"
 		var en_el_suelo := absf(y - _suelo) < 0.5
 		var empuje := o.empuje if o.empuje != "" and en_el_suelo and _datos.has(o.empuje) else ""
@@ -1240,6 +1254,13 @@ func _avanzar(delta: float) -> void:
 		# con lo que avanza el cuerpo; la altura de llegada manda en la y
 		x = _base.x + (float(r[0]) + _corr * float(s[0])) * _d
 		y = _base.y + float(s[1]) * (_y_fin - _base.y) if absf(_y_fin - _base.y) > 0.5 else _base.y + float(r[1])
+		if _anim == "trepar" and absf(_y_fin - _base.y) > 0.5:
+			# LAS MANOS EN EL BORDE (2026-10-29): repartida en toda la subida, la
+			# diferencia con la altura del video estaba casi entera al agarrarse
+			# (manos en el aire o dentro de la piedra); ahora va toda en el salto,
+			# antes de agarrarse: salta algo mas o algo menos y luego es el video
+			var dy: float = (_y_fin - _base.y) - float(dat["viaje"][1])
+			y = _base.y + float(r[1]) + dy * clampf(float(s[1]) / AGARRE_ALTO, 0.0, 1.0)
 	elif _k == 0:
 		# entrada del empuje: lo que falta se anda antes de tocar el sillar
 		var rc: float = float(dat["raiz"][maxi(_contacto, 1)][0])

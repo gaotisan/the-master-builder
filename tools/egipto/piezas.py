@@ -53,12 +53,20 @@ NOMBRES = {
     "Ruinas de piedra sobre fondo verde.png": "gradas",
     "Ruinas de piedra sobre plataforma unerquicklich.png": "ruina_escalinata",
     "Ruinas de templo de arena en plataformas.png": "templo_pisos",
-    "Ruinas de templo egipcio sobre verde croma.png": "templo_terrazas",
+    # (2026-10-28: el mismo templo repintado por ChatGPT, algo mas gastado,
+    # alineado sobre el original: "Ruinas antiguas de templo de arenisca
+    # (ChatGPT).png" -> ECC afin, la silueta casa al 97 %; se recorta como el
+    # original, RECORTE, para que sus cajas sigan valiendo)
+    "Ruinas de templo egipcio, desgastado (alineado).png": "templo_terrazas",
     "Ruinas egipcias bajo el sol cálido.png": "templo_rampa",
     "Ruinas egipcias bajo un sol alado.png": "portico_caido",
     "Templo egipcio de piedra en ruinas.png": "templo_escalinata",
 }
 # (las "(1)" y "-2"/"-3" repetidas son la misma imagen: se usa una)
+
+# el recorte de una pieza fijo (y0, y1, x0, x1 en su imagen): la del original,
+# cuando se cambia por otra version alineada
+RECORTE = {"templo_terrazas": (13, 850, 21, 1765)}
 
 # la luz de la playa (como LUZ_ARENA de capas.py, algo menos): el naranja
 # saturado de las imagenes, hacia la caliza palida del acto
@@ -178,7 +186,11 @@ def main():
                 guardar(os.path.join(DESTINO, n + ".png"), p)
                 datos[n] = [p.shape[1], p.shape[0]]
         else:
-            p = recortar(img)
+            if nombre in RECORTE:
+                y0, y1, x0, x1 = RECORTE[nombre]
+                p = img[y0:y1, x0:x1]
+            else:
+                p = recortar(img)
             guardar(os.path.join(DESTINO, nombre + ".png"), p)
             datos[nombre] = [p.shape[1], p.shape[0]]
         print(nombre)

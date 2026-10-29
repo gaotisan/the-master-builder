@@ -87,6 +87,13 @@ func _ready() -> void:
 	# de 225-252 que no se podia subir ni de una forma ni de otra, y que las
 	# alturas de lo dibujado (recortes) no siempre esquivan
 	margen_altura = 0.36
+	# LAS TREPADAS, SOLO DONDE LAS MANOS CASAN CON EL BORDE (2026-10-29; el
+	# templo retocado a su medida, retoque_templo.py): la mediana de 150 a 195
+	# (su video: 172) y la alta de 295 a 425 (362; las manos van al borde
+	# saltando algo mas o algo menos). Lo de menos se sube de un salto andando
+	# (llega a ~182); lo de entre medias no se trepa
+	banda_mediana = Vector2(150.0, 195.0)
+	banda_alta = Vector2(295.0, 425.0)
 	if p:
 		# el suelo de abajo manda (acciones_perfil.gd lo toma de donde pisa el
 		# peregrino al empezar) y los limites son los del nivel
@@ -96,6 +103,18 @@ func _ready() -> void:
 	super()
 	if _peregrino:
 		_peregrino.suelo_en = _suelo_peregrino
+		if not recorrido.is_empty():
+			# (CAER DE ALTO: de mas de lo que se baja de un saltito, con la de flotar)
+			_peregrino.caida_flotar_desde = subida_alta * (1.0 + margen_altura)
+			# (GIRO AGIL: en la piedra, cambiar de sentido andando sin pararse tanto)
+			_peregrino.giro_agil = true
+			# SIN ESCALONES QUE SE ANDEN (2026-10-29, el usuario: subir y bajar
+			# escalones andando "es feisimo"): en la piedra el nodo solo se lleva
+			# andando lo que no se nota (hasta 15 px); lo demas se sube de un
+			# salto (tambien de parado, sin tecla, delante del escalon) y se baja
+			# dejandose caer. El templo, sin escalones de 16 a 60 (retoque_templo.py)
+			peldano = 15.0
+			_peregrino.salto_encima_parado_cerca = 140.0
 	for n in prueba_bloques:
 		var o := _objeto(n)
 		if o:
@@ -188,10 +207,34 @@ func _accion_en(sig: Dictionary, y: float, d: float) -> Dictionary:
 	if not sig.is_empty() and float(sig["y"]) > y + peldano and _es_hueco(float(sig["x"]), y, d):
 		return {}
 	var r := super(sig, y, d)
+	# CAER DE ALTO (2026-10-28, el usuario: en los bordes altos de la piedra "no
+	# deja avanzar"): un borde mas alto de lo que se baja de un saltito tambien
+	# se deja caer andando; el peregrino baja con la de flotar y la gravedad de
+	# siempre (caida_flotar_desde). Parado en el filo, no hace el saltito de bajar.
+	if not recorrido.is_empty() and not sig.is_empty() and float(sig["y"]) > y 			and not r.has("baja") and _datos.has("bajar"):
+		var x_cae: float = float(sig["x"]) + d * float(_datos["bajar"]["cara_fin"])
+		var y_cae := _nivel(x_cae)
+		if y_cae - y > subida_alta * (1.0 + margen_altura) and x_cae > _limites.x and x_cae < _limites.y:
+			r["baja"] = "bajar"
+			r["alta"] = true
+			r["y"] = y_cae
 	if r.get("objeto") != null and r["objeto"].nombre == "losa" and not _losa_hecha:
 		r["empuje"] = "empujar_v2"
 		r["parada"] = float(r["cara"]) - d * float(_datos["empujar_v2"]["cara"])
 	return r
+
+## CAER DE ALTO: hacia un borde alto, con la tecla hacia el, siempre se deja caer
+## andando (tambien desde parado: arranca a andar y salta en el filo).
+func _cae_andando(a: Dictionary, s: float, eje: float) -> bool:
+	if a.get("alta", false):
+		return a.has("baja") and not _en_mano() and _peregrino.mirando() == s and signf(eje) == s
+	return super(a, s, eje)
+
+## ...y el saltito de bajar, no (es para lo que se baja de un paso).
+func _empezar_una(anim: String, a: Dictionary, d: float) -> void:
+	if anim == "bajar" and a.get("alta", false):
+		return
+	super(anim, a, d)
 
 ## Un sillar mas alto que un paso bajo no cabe dentro: el sitio acaba en su boca.
 func _hueco_delante(o: Objeto, d: float) -> float:

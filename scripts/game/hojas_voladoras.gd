@@ -66,6 +66,21 @@ const MALLA_SHADER := preload("res://scripts/game/hojas_lecho.gdshader")
 @export var y_suelo: float = 1200.0
 @export var x_luz: float = 1456.0
 @export var brillo: float = 1.0
+## LUZ PLENA (2026-10-28, Egipto: las hojas que trae el portal, a pleno sol): si
+## es >= 0, toda la capa tiene esa luz (por brillo), sin haz ni mancha; < 0, la
+## del claro de la hojarasca.
+@export var luz_plena: float = -1.0
+## EL VIRAJE (hojas_lecho.gdshader): cuanto se apagan hacia gris y el tinte; las
+## que vuelan, con el mismo shader en su capa (viraje()).
+func viraje(desatura: float, tinte: Color, shader_vuelo: Shader) -> void:
+	var m := _mm_nodo.material as ShaderMaterial
+	m.set_shader_parameter("desatura", desatura)
+	m.set_shader_parameter("tinte", Vector3(tinte.r, tinte.g, tinte.b))
+	var v := ShaderMaterial.new()
+	v.shader = shader_vuelo
+	v.set_shader_parameter("desatura", desatura)
+	v.set_shader_parameter("tinte", Vector3(tinte.r, tinte.g, tinte.b))
+	_vuelo.material = v
 ## El haz: lo pone la escena con poner_haz (el del material del fondo, para que
 ## haya una sola geometria del haz); estos son los de fondo_haz por si no.
 var haz_origen := Vector2(1620.0, -700.0)
@@ -379,6 +394,8 @@ func pisar(h: Dictionary, empuje: Vector2) -> void:
 
 ## La luz en p (con luz_viva: lo que quede del haz; sin, la entera).
 func luz_en(p: Vector2, con_viva := true) -> float:
+	if luz_plena >= 0.0:
+		return luz_plena * brillo
 	var dx := (p.x - x_luz) / 1050.0
 	var dy := (p.y - y_suelo) / 520.0
 	var suelo := LUZ_OSCURA + 0.87 * exp(-(dx * dx + 0.6 * dy * dy) * 1.6)
