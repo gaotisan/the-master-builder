@@ -13,7 +13,8 @@ extends Node2D
 ##     y bajitos, hasta que la gente se mete en el templo.
 ##   - El barco: en el video se iria por el borde; desde que llega cerca (el
 ##     fotograma del relevo, templo.json "barco") el video lo lleva borrado y
-##     sigue este, suelto, rio abajo a su velocidad, con su reflejo.
+##     sigue este, suelto, rio abajo a su velocidad, con su reflejo, remando:
+##     los fotogramas del remo del video, adelante y atras desde el del relevo.
 ## Lo prepara tools/egipto/templo_rio.py (assets/egipto/acto1/templo/templo.json);
 ## va en la capa de la orilla, en sus coordenadas.
 
@@ -33,6 +34,7 @@ var _barco: Sprite2D
 var _barco_reflejo: Sprite2D
 var _barco_d: Dictionary
 var _barco_t := -1.0   # s desde el relevo (negativo: aun lo lleva el video)
+var _barco_fot: Array[Texture2D] = []
 ## Cuanto sigue el barco rio abajo antes de quitarlo (s).
 var barco_dura := 90.0
 
@@ -45,7 +47,8 @@ func montar(d: Dictionary) -> void:
 	_quieto.texture = load(d["primero"])
 	_quieto.centered = false
 	_quieto.material = m
-	_quieto.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	# (sin mipmaps, como el video: con ellos el ultimo fotograma salia borroso)
+	_quieto.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(_quieto)
 	_ultimo = load(d["ultimo"])
 	# el reflejo, justo debajo (la textura acaba en la linea del agua)
@@ -70,12 +73,14 @@ func montar(d: Dictionary) -> void:
 	add_child(_cantos)
 	if d.has("barco"):
 		_barco_d = d["barco"]
-		var bt: Texture2D = load(_barco_d["textura"])
+		for ruta in _barco_d["fotogramas"]:
+			_barco_fot.append(load(ruta))
+		var bt: Texture2D = _barco_fot[-1]
 		_barco = Sprite2D.new()
 		_barco.texture = bt
 		_barco.centered = false
 		_barco.material = m
-		_barco.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		_barco.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		_barco.visible = false
 		add_child(_barco)
 		# (su textura tambien acaba en la linea del agua)
@@ -123,6 +128,12 @@ func _process(delta: float) -> void:
 		_barco_reflejo.queue_free()
 		_barco = null
 		return
+	# el remo: del fotograma del relevo (el ultimo) hacia atras y vuelta
+	var n := _barco_fot.size()
+	var f := int(_barco_t * float(_barco_d["fps"])) % maxi(2 * (n - 1), 1)
+	var tex := _barco_fot[n - 1 - f] if f < n else _barco_fot[f - n + 1]
+	_barco.texture = tex
+	_barco_reflejo.texture = tex
 	var x := float(_barco_d["x"]) + float(_barco_d["velocidad"]) * _barco_t
 	_barco.position = Vector2(x, float(_barco_d["y"]))
 	_barco_reflejo.position = Vector2(x, float(_barco_d["y"]) + _barco.texture.get_height())

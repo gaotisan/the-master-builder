@@ -157,10 +157,18 @@ def recortar(bgr):
 RELEVO = 556         # el ultimo fotograma del video con el barco: luego, el suelto
 PROA = 548           # (en el 556 la punta de la proa ya se sale del video: la de aqui)
 RECORTE = (760, 380, 1280, 650)    # x0, y0, x1, y1 donde se busca el barco
-POR_FOTOGRAMA = 4.71 # px que avanza (medido del 536 al 564; luego el video da un salto)
+POR_FOTOGRAMA = 4.87 # px que avanza (seguido con subpixel del 526 al 556; luego el video da un salto)
 BANDA = (790, 395)   # desde aqui (x, y) el video lleva el barco borrado (la gente, a la izquierda)
 FUNDIDO_BANDA = 16
 CANVAS_BARCO = (760, 380, 1320, 650)  # el barco suelto: px del video (la proa pasa del borde)
+# EL REMO (2026-10-29, el usuario: "tener el barco remando para que se mueva y no
+# solo desplazarse"): los fotogramas REMO..RELEVO del video, con el barco quieto
+# (seguido con subpixel) y recortado; en el juego, adelante y atras (un golpe de
+# remo: en el video no llega a repetirse). Lo rigido (casco, sarcofago, vela y el
+# remero de delante, que apenas se mueve) con la silueta del barco.png (BiRefNet);
+# el remero de atras y su remo, por diferencia con el templo vacio encajado.
+REMO = 526
+ZONAS_REMO = [(840, 1000, 466, 600), (850, 916, 600, 628)]  # px del video en el RELEVO
 PROA_DESDE = 1262    # x del video desde donde manda la proa del PROA
 
 
@@ -244,24 +252,114 @@ def video(destino, ult):
         raise RuntimeError("ffmpeg")
 
 
-def barco(destino):
-    """El barco suelto para el juego: a la escala del video del juego y cortado
-    en la linea del agua, como el templo. Devuelve lo que va en templo.json."""
+def seguir_barco(f, plantilla, mascara):
+    """Lo que se ha corrido el barco respecto al RELEVO (casco y sarcofago),
+    con subpixel."""
+    x0, y0 = 880, 585
+    zona = f[y0 - 14:y0 + plantilla.shape[0] + 14, 600:1280]
+    r = cv2.matchTemplate(zona, plantilla, cv2.TM_SQDIFF, mask=mascara)
+    _, _, (lx, ly), _ = cv2.minMaxLoc(r)
+
+    def sub(a, b, c):
+        d = a - 2 * b + c
+        return 0.0 if d == 0 else 0.5 * (a - c) / d
+    sx = sub(r[ly, lx - 1], r[ly, lx], r[ly, lx + 1]) if 0 < lx < r.shape[1] - 1 else 0.0
+    sy = sub(r[ly - 1, lx], r[ly, lx], r[ly + 1, lx]) if 0 < ly < r.shape[0] - 1 else 0.0
+    return lx + sx + 600 - x0, ly + sy - 14
+
+
+def barco(carpeta, ult):
+    """El barco suelto para el juego: un PNG por fotograma del remo, a la escala
+    del video del juego y cortado en la linea del agua, como el templo. Devuelve
+    lo que va en templo.json."""
     b = leer(os.path.join(ORIGEN, "barco.png"), cv2.IMREAD_UNCHANGED)
     d = json.load(open(os.path.join(ORIGEN, "barco.json"), encoding="utf-8"))
-    b = b[:CORTE - d["y"]]
-    # (premultiplicado al reducir: sin orla oscura)
-    f = b.astype(np.float32)
-    a = f[..., 3:] / 255.0
-    f[..., :3] *= a
-    r = cv2.resize(f, None, fx=REDUCE, fy=REDUCE, interpolation=cv2.INTER_AREA)
-    ar = np.maximum(r[..., 3:] / 255.0, 1e-6)
-    r[..., :3] = np.where(r[..., 3:] > 0.5, r[..., :3] / ar, 0)
-    guardar(destino, np.clip(r, 0, 255).astype(np.uint8))
+    ox, oy = d["x"], d["y"]
+    alto, ancho = b.shape[:2]
+    base = b[..., 3].astype(np.float32) / 255.0
+    movil = np.zeros((alto, ancho), np.float32)
+    for x0, x1, y0, y1 in ZONAS_REMO:
+        movil[y0 - oy:y1 - oy, x0 - ox:x1 - ox] = 1
+    rigido = base * (1 - movil)
+    zona_m = cv2.dilate(movil, np.ones((15, 15), np.uint8))
+    plantilla = b[585 - oy:634 - oy, 880 - ox:1240 - ox, :3]
+    mascara_p = (b[585 - oy:634 - oy, 880 - ox:1240 - ox, 3] > 220).astype(np.uint8)
+    ult_gris = cv2.GaussianBlur(cv2.cvtColor(ult, cv2.COLOR_BGR2GRAY).astype(np.float32), (0, 0), 1.5)
+    os.makedirs(carpeta, exist_ok=True)
+    for viejo in os.listdir(carpeta):
+        if viejo.endswith(".png"):
+            os.remove(os.path.join(carpeta, viejo))
+    cap = cv2.VideoCapture(os.path.join(ORIGEN, "secuencia.mp4"))
+    k = 0
+    rutas = []
+    while k <= RELEVO:
+        ok, f = cap.read()
+        if not ok:
+            break
+        if k < REMO:
+            k += 1
+            continue
+        dx, dy = seguir_barco(f, plantilla, mascara_p)
+        # el templo vacio encajado, fuera del barco y de la gente
+        mb = np.zeros(f.shape[:2], np.uint8)
+        xa, xb = ox + int(dx), min(f.shape[1], ox + int(dx) + ancho)
+        mb[oy:oy + alto, xa:xb] = base[:, :xb - xa] > 0.3
+        mb = cv2.dilate(mb, np.ones((41, 41), np.uint8))
+        mascara = np.zeros(f.shape[:2], np.uint8)
+        mascara[200:650, 780:] = 1
+        mascara[mb > 0] = 0
+        g = cv2.GaussianBlur(cv2.cvtColor(f, cv2.COLOR_BGR2GRAY).astype(np.float32), (0, 0), 1.5)
+        w = np.eye(2, 3, dtype=np.float32)
+        try:
+            _, w = cv2.findTransformECC(g, ult_gris, w, cv2.MOTION_AFFINE,
+                                        (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 80, 1e-5), mascara, 1)
+        except cv2.error:
+            pass
+        placa = cv2.warpAffine(ult, w, (f.shape[1], f.shape[0]), flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
+                               borderMode=cv2.BORDER_REFLECT)
+        # al lienzo del barco, quieto
+        M = np.float32([[1, 0, -dx - ox], [0, 1, -dy - oy]])
+        fs = cv2.warpAffine(f, M, (ancho, alto), borderMode=cv2.BORDER_REPLICATE).astype(np.float32)
+        ps = cv2.warpAffine(placa, M, (ancho, alto), borderMode=cv2.BORDER_REPLICATE).astype(np.float32)
+        dif = np.abs(cv2.GaussianBlur(fs, (0, 0), 0.8) - cv2.GaussianBlur(ps, (0, 0), 0.8)).max(2)
+        a = np.clip((dif - 16) / 26, 0, 1)
+        # donde detras hay croma, lo que no es verde
+        verde_detras = (ps[..., 1] - np.maximum(ps[..., 0], ps[..., 2])) > 40
+        ak = 1 - np.clip(((fs[..., 1] - np.maximum(fs[..., 0], fs[..., 2])) - 25) / 70, 0, 1)
+        a = np.where(verde_detras, ak, a)
+        # (ni hojas de palmera)
+        a[(fs[..., 1] > fs[..., 2] - 2) & (fs[..., 1] > fs[..., 0] + 10)] = 0
+        a *= zona_m
+        # los huecos dentro de la silueta del remero (ropa clara sobre piedra clara)
+        sil = cv2.morphologyEx((a > 0.3).astype(np.uint8), cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
+        lleno = sil.copy()
+        cv2.floodFill(lleno, np.zeros((alto + 2, ancho + 2), np.uint8), (0, 0), 1)
+        a = np.maximum(a, (sil | (lleno == 0)).astype(np.float32) * zona_m)
+        al = np.maximum(rigido, a)
+        # solo lo pegado al barco
+        n, lab, st, _ = cv2.connectedComponentsWithStats((al > 0.4).astype(np.uint8))
+        grande = 1 + np.argmax(st[1:, 4])
+        al *= cv2.dilate((lab == grande).astype(np.uint8), np.ones((3, 3), np.uint8))
+        rgba = np.dstack([fs, al * 255])
+        # lo que cae fuera del video (la proa): la del barco.png
+        fuera = (np.arange(ancho) + ox + dx) >= f.shape[1] - 1
+        rgba[:, fuera] = b[:, fuera]
+        rgba = rgba[:CORTE - oy]
+        # (premultiplicado al reducir: sin orla oscura)
+        rgba[..., :3] *= rgba[..., 3:] / 255.0
+        r = cv2.resize(rgba, None, fx=REDUCE, fy=REDUCE, interpolation=cv2.INTER_AREA)
+        ar = np.maximum(r[..., 3:] / 255.0, 1e-6)
+        r[..., :3] = np.where(r[..., 3:] > 0.5, r[..., :3] / ar, 0)
+        nombre = "%02d.png" % (k - REMO)
+        guardar(os.path.join(carpeta, nombre), np.clip(r, 0, 255).astype(np.uint8))
+        rutas.append(RES + "barco/" + nombre)
+        k += 1
     return {
-        "textura": RES + "barco.png",
+        # (el ultimo es el del RELEVO; en el juego van adelante y atras desde el)
+        "fotogramas": rutas,
+        "fps": 24,
         # px de la textura del templo (la del video del juego)
-        "x": round(d["x"] * REDUCE, 2), "y": round((d["y"] - ARRIBA) * REDUCE, 2),
+        "x": round(ox * REDUCE, 2), "y": round((oy - ARRIBA) * REDUCE, 2),
         "desde": d["fotograma"] / 24.0,
         "velocidad": round(POR_FOTOGRAMA * 24.0 * REDUCE, 2),
     }
@@ -349,7 +447,7 @@ def main():
     guardar(os.path.join(DESTINO, "ultimo.png"), recortar(ultimo))
     video(os.path.join(DESTINO, "secuencia.ogv"), ultimo)
     cantos(os.path.join(DESTINO, "cantos.ogg"))
-    datos_barco = barco(os.path.join(DESTINO, "barco.png"))
+    datos_barco = barco(os.path.join(DESTINO, "barco"), ultimo)
     # en el juego: px de la orilla -> coordenadas de su capa
     datos = {
         "capa": "orilla",

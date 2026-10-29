@@ -2,21 +2,20 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bof57ntctlipc"
-path.bptc="res://.godot/imported/barco.png-57cff7f2eeae552ac922b456388d06a2.bptc.ctex"
+uid="uid://dwfjw48gg5dbc"
+path="res://.godot/imported/03.png-904af790b71e78c6fdb57cbfabbce1ae.ctex"
 metadata={
-"imported_formats": ["s3tc_bptc"],
-"vram_texture": true
+"vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/egipto/acto1/templo/barco.png"
-dest_files=["res://.godot/imported/barco.png-57cff7f2eeae552ac922b456388d06a2.bptc.ctex"]
+source_file="res://assets/egipto/acto1/templo/barco/03.png"
+dest_files=["res://.godot/imported/03.png-904af790b71e78c6fdb57cbfabbce1ae.ctex"]
 
 [params]
 
-compress/mode=2
+compress/mode=0
 compress/high_quality=true
 compress/lossy_quality=0.7
 compress/uastc_level=0
@@ -24,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
