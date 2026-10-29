@@ -847,6 +847,10 @@ def main():
             w = cv2.imread(os.path.join(DESTINO, os.path.basename(tr["tex"])), cv2.IMREAD_UNCHANGED).shape[1]
             datos["fin_suelo"] = round(tr["x"] + w * ESCALA, 1)
     json.dump(datos, open(os.path.join(DESTINO, "capas.json"), "w", encoding="utf-8"), indent=1)
+    # el templo del cortejo en la orilla (templo_rio.py): quita el de la torre
+    if os.path.isdir(os.path.join(REFS, "egipto_templo_video")):
+        import templo_rio
+        templo_rio.main()
     print("capas escritas")
 
 

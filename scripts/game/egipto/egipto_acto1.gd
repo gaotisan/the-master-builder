@@ -45,9 +45,20 @@ const CAPAS := "res://assets/egipto/acto1/capas/capas.json"
 ## fundido de entrada una vez y luego sus 3 compases desde MUSICA_BUCLE.
 const MUSICA := preload("res://assets/audio/musica_egipto_acto1_intro.ogg")
 const MUSICA_BUCLE := 4.819396
-## La pista completa, para cuando suba al altar y se anime el fondo (el cortejo
-## funebre y el rio).
-const MUSICA_COMPLETA := "res://assets/audio/musica_egipto_acto1.ogg"
+## El tema (tools/egipto/musica_tema.py): al lanzarse el templo del cortejo,
+## donde acaba la vuelta de la intro (en su golpe, como en la pista original), y
+## luego se repite el solo, sin volver a la intro.
+const MUSICA_TEMA := preload("res://assets/audio/musica_egipto_acto1_tema.ogg")
+## El templo del cortejo en la orilla de enfrente (tools/egipto/templo_rio.py):
+## su video se lanza al llegar a lo alto del altar.
+const TEMPLO := "res://assets/egipto/acto1/templo/templo.json"
+var _templo: TemploRio
+var _templo_capa: Array = []      # la entrada de su capa en _tira_capas
+## En lo alto del altar, la camara se va al templo: donde queda en la pantalla
+## (fraccion del ancho) y el zoom.
+@export var templo_en_pantalla := 0.3
+@export var zoom_templo := 0.55
+@export var templo_cantos_db := -32.0   # los canticos del cortejo (lejos, muy bajitos: a -16 "se escuchan un monton")
 ## El zoom con el que las capas de la tira casan como en la imagen (las lejanas
 ## casi no siguen el zoom de la camara) y la camara de referencia (todas
 ## alineadas como en la imagen).
@@ -86,6 +97,9 @@ const ANDANDO := ["REPOSO", "ARRANQUE_ANDAR", "ANDAR", "PARADA_ANDAR", "ARRANQUE
 @export var x_prueba := -1.0
 @export var musica_db := -12.0     # (como la del camino en la hojarasca)
 @export var musica_entrada := 3.0    # s del fundido al empezar
+var _musica_p: AudioStreamPlayer
+var _musica_al_tema := false
+var _musica_pos := 0.0
 
 @onready var _peregrino: Node2D = $DarkStage/Peregrino
 @onready var _camara: Camera2D = $DarkStage/Camera
@@ -251,6 +265,7 @@ func _physics_process(delta: float) -> void:
 		_sombra_repisas()
 		_polvo_recorrido()
 		_sol_peregrino()
+		_templo_si_toca()
 	_mover_camara(delta)
 	_mover_bandas(delta)
 	_mover_sombra()
@@ -553,6 +568,54 @@ func _hacer_mirador(x: float) -> void:
 	_bandas_objetivo = 0.0
 	_fin_cinematica()
 	_peregrino.control_bloqueado = false
+
+## En lo alto del altar (la caja mas alta del recorrido en la marca del
+## mirador), parado: se lanza el video del templo.
+func _templo_si_toca() -> void:
+	if _templo == null or _templo.lanzado or _cine:
+		return
+	var mr: Dictionary = _acciones.recorrido.get("marcas", {})
+	if not mr.has("mirador"):
+		return
+	var x: float = mr["mirador"]
+	var p := _peregrino
+	if absf(p.position.x - x) > 160.0 or _estado() != "REPOSO" or not _acciones.libre():
+		return
+	var arriba := 0.0
+	for c in _acciones.recorrido["cajas"]:
+		if x >= float(c["x0"]) and x <= float(c["x1"]):
+			arriba = maxf(arriba, float(c["arriba"]))
+	if p.position.y > float(nivel["suelo"]) - arriba + 20.0:
+		return
+	_ver_templo()
+
+## El peregrino se queda mirando al templo (control bloqueado), la camara va
+## hacia el y corre el video entero; al acabar, todo como estaba.
+func _ver_templo() -> void:
+	_peregrino.control_bloqueado = true
+	_peregrino.girar_hacia(_peregrino.position.x - 100.0)
+	_bandas_objetivo = 0.1
+	_cinematica(_camara_al_templo(), zoom_templo, 0.5)
+	await get_tree().create_timer(1.5).timeout
+	_templo.cantos_db = templo_cantos_db
+	_templo.lanzar()
+	_musica_tema()
+	await _templo.acabado
+	await get_tree().create_timer(1.0).timeout
+	_bandas_objetivo = 0.0
+	_fin_cinematica()
+	_peregrino.control_bloqueado = false
+
+## Donde poner la camara para que el templo (en su capa, con su paralaje) quede
+## a templo_en_pantalla del ancho; de alto, la del peregrino.
+func _camara_al_templo() -> Vector2:
+	var tam := get_viewport().get_visible_rect().size
+	var px: float = _templo_capa[1]
+	var zt := lerpf(TIRA_ZOOM, zoom_templo, px)
+	var tx := _templo.position.x + _templo.ancho() * 0.5
+	var desp_x := tx - (templo_en_pantalla - 0.5) * tam.x / zt
+	var x := _dentro_del_nivel(TIRA_C0.x + (desp_x - TIRA_C0.x) / px, zoom_templo)
+	return Vector2(x, _peregrino.position.y - 260.0)
 
 func _al_intentar_losa() -> void:
 	if _final:
@@ -1106,7 +1169,14 @@ func _montar_tira() -> void:
 				s.position.y -= ARENA_SUBE
 			s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 			capa.add_child(s)
+		# (antes de su calima: la base del templo, en el aire de la orilla)
+		if String(c["nombre"]) == "orilla" and FileAccess.file_exists(TEMPLO):
+			_templo = TemploRio.new()
+			_templo.montar(JSON.parse_string(FileAccess.get_file_as_string(TEMPLO)))
+			capa.add_child(_templo)
 		_tira_capas.append([capa, float(c["p"]), float(c["py"]), float(c.get("deriva", 0.0))])
+		if _templo and _templo.get_parent() == capa:
+			_templo_capa = _tira_capas[-1]
 		_poner_naves(capa, String(c["nombre"]))
 		if String(c["nombre"]) == "ciudad" and _con_capas:
 			_poner_lluvia(capa)
@@ -1146,8 +1216,49 @@ func _musica() -> void:
 	p.volume_db = MusicAmbience.SILENCIO
 	add_child(p)
 	p.play()
+	_musica_p = p
 	var tw := create_tween()
 	tw.tween_property(p, "volume_db", musica_db, musica_entrada).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+## Que entre el tema en cuanto acabe la vuelta del bucle de la intro.
+func _musica_tema() -> void:
+	if _musica_p == null:
+		return
+	_musica_al_tema = true
+	_musica_pos = _musica_p.get_playback_position()
+
+func _process(delta: float) -> void:
+	if _musica_al_tema:
+		_musica_cambio(delta)
+
+## El cambio, en la costura del bucle: si falta menos de medio fotograma para
+## el final, ya (se pierden unos ms de la cola, que es casi silencio antes del
+## golpe); si ya ha vuelto a empezar, el tema desde lo que se ha pasado. (Sin
+## AudioServer.get_time_since_last_mix: grabando con --write-movie lo adelantaba
+## 136 ms; la posicion de la ultima mezcla va como mucho una mezcla tarde, y
+## eso lo recoge lo de "ya ha vuelto a empezar".)
+func _musica_cambio(delta: float) -> void:
+	var p := _musica_p
+	var pos := p.get_playback_position()
+	var desde := -1.0
+	if pos < _musica_pos - 1.0:
+		desde = maxf(pos - MUSICA_BUCLE, 0.0)
+	elif p.stream.get_length() - pos < delta * 0.5:
+		desde = 0.0
+	_musica_pos = pos
+	if desde < 0.0:
+		return
+	_musica_al_tema = false
+	var tema := MUSICA_TEMA.duplicate() as AudioStreamOggVorbis
+	tema.loop = true
+	var t := AudioStreamPlayer.new()
+	t.stream = tema
+	t.volume_db = p.volume_db
+	add_child(t)
+	t.play(desde)
+	p.stop()
+	p.queue_free()
+	_musica_p = t
 
 ## La orilla de enfrente: el viento en su vegetacion (con su mascara, la pieza
 ## *_viento_N de al lado) y el temblor de su reflejo.

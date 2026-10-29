@@ -1,0 +1,155 @@
+class_name TemploRio
+extends Node2D
+## EL TEMPLO DEL CORTEJO (2026-10-29, el usuario: el templo de sus videos en la
+## orilla de enfrente, en lugar del de la torre; "el primer fotograma del video
+## se encaja ahi, luego se activa cuando el peregrino llega arriba y se lanza";
+## el video acaba con el templo sin barco y sin gente, y eso se queda).
+##   - Quieto en su primer fotograma hasta lanzar(); luego el video (los tres
+##     unidos: la procesion baja el sarcofago, el barco atraca y lo cargan, y se
+##     va remando) y al acabar, su ultimo fotograma para siempre.
+##   - Sobre croma: lo recorta templo_rio.gdshader, con el color de la orilla; y
+##     su reflejo en el agua, el mismo dibujo boca abajo.
+##   - Con el video, los canticos del cortejo (el audio del primer video), lejos
+##     y bajitos, hasta que la gente se mete en el templo.
+##   - El barco: en el video se iria por el borde; desde que llega cerca (el
+##     fotograma del relevo, templo.json "barco") el video lo lleva borrado y
+##     sigue este, suelto, rio abajo a su velocidad, con su reflejo.
+## Lo prepara tools/egipto/templo_rio.py (assets/egipto/acto1/templo/templo.json);
+## va en la capa de la orilla, en sus coordenadas.
+
+const SHADER := preload("res://scripts/game/egipto/templo_rio.gdshader")
+
+signal acabado
+
+var lanzado := false
+## El volumen de los canticos (lo pone el nivel).
+var cantos_db := -14.0
+var _quieto: Sprite2D
+var _reflejo: Sprite2D
+var _video: VideoStreamPlayer
+var _ultimo: Texture2D
+var _cantos: AudioStreamPlayer
+var _barco: Sprite2D
+var _barco_reflejo: Sprite2D
+var _barco_d: Dictionary
+var _barco_t := -1.0   # s desde el relevo (negativo: aun lo lleva el video)
+## Cuanto sigue el barco rio abajo antes de quitarlo (s).
+var barco_dura := 90.0
+
+func montar(d: Dictionary) -> void:
+	position = Vector2(float(d["x"]), float(d["y"]))
+	var e := float(d["escala"])
+	scale = Vector2(e, e)
+	var m := _material(d, false)
+	_quieto = Sprite2D.new()
+	_quieto.texture = load(d["primero"])
+	_quieto.centered = false
+	_quieto.material = m
+	_quieto.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	add_child(_quieto)
+	_ultimo = load(d["ultimo"])
+	# el reflejo, justo debajo (la textura acaba en la linea del agua)
+	_reflejo = Sprite2D.new()
+	_reflejo.texture = _quieto.texture
+	_reflejo.centered = false
+	_reflejo.flip_v = true
+	_reflejo.position.y = _quieto.texture.get_height()
+	_reflejo.material = _material(d, true)
+	add_child(_reflejo)
+	_video = VideoStreamPlayer.new()
+	_video.stream = load(d["video"])
+	_video.material = m
+	_video.size = _quieto.texture.get_size()
+	_video.expand = true
+	_video.visible = false
+	_video.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_video.finished.connect(_al_acabar)
+	add_child(_video)
+	_cantos = AudioStreamPlayer.new()
+	_cantos.stream = load(d["cantos"])
+	add_child(_cantos)
+	if d.has("barco"):
+		_barco_d = d["barco"]
+		var bt: Texture2D = load(_barco_d["textura"])
+		_barco = Sprite2D.new()
+		_barco.texture = bt
+		_barco.centered = false
+		_barco.material = m
+		_barco.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		_barco.visible = false
+		add_child(_barco)
+		# (su textura tambien acaba en la linea del agua)
+		_barco_reflejo = Sprite2D.new()
+		_barco_reflejo.texture = bt
+		_barco_reflejo.centered = false
+		_barco_reflejo.flip_v = true
+		_barco_reflejo.material = _material(d, true)
+		_barco_reflejo.visible = false
+		add_child(_barco_reflejo)
+
+## De ancho, en unidades de su capa.
+func ancho() -> float:
+	return _quieto.texture.get_width() * scale.x
+
+func lanzar() -> void:
+	if lanzado:
+		return
+	lanzado = true
+	_video.play()
+	_cantos.volume_db = cantos_db
+	_cantos.play()
+	# (el quieto hasta que el video tenga su primer fotograma)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_video.visible = true
+	_quieto.visible = false
+	_reflejo.texture = _video.get_video_texture()
+
+func _process(delta: float) -> void:
+	if _barco == null or not lanzado:
+		return
+	if _barco_t < 0.0:
+		# el relevo, a la vez que el video
+		var desde := float(_barco_d["desde"])
+		if _video.stream_position < desde:
+			return
+		_barco_t = _video.stream_position - desde
+		_barco.visible = true
+		_barco_reflejo.visible = true
+	else:
+		_barco_t += delta
+	if _barco_t > barco_dura:
+		_barco.queue_free()
+		_barco_reflejo.queue_free()
+		_barco = null
+		return
+	var x := float(_barco_d["x"]) + float(_barco_d["velocidad"]) * _barco_t
+	_barco.position = Vector2(x, float(_barco_d["y"]))
+	_barco_reflejo.position = Vector2(x, float(_barco_d["y"]) + _barco.texture.get_height())
+
+func _al_acabar() -> void:
+	_quieto.texture = _ultimo
+	_reflejo.texture = _ultimo
+	_quieto.visible = true
+	_video.visible = false
+	acabado.emit()
+
+func _material(d: Dictionary, es_reflejo: bool) -> ShaderMaterial:
+	var m := ShaderMaterial.new()
+	m.shader = SHADER
+	# (templo.json "grado": filas = canal de salida RGB, la ultima columna se suma)
+	var g: Array = d["grado"]
+	m.set_shader_parameter("grado", Basis(_columna(g, 0), _columna(g, 1), _columna(g, 2)))
+	m.set_shader_parameter("grado_add", _columna(g, 3))
+	m.set_shader_parameter("reflejo", es_reflejo)
+	# (templo.json "velo": color 0-255 y cuanto)
+	if d.has("velo"):
+		m.set_shader_parameter("velo_color", _v3(d["velo"]["color"]) / 255.0)
+		m.set_shader_parameter("velo", float(d["velo"]["cuanto"]))
+	return m
+
+func _v3(a: Array) -> Vector3:
+	return Vector3(float(a[0]), float(a[1]), float(a[2]))
+
+func _columna(g: Array, j: int) -> Vector3:
+	return Vector3(float(g[0][j]), float(g[1][j]), float(g[2][j]))

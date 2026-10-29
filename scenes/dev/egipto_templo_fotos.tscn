@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/dev/egipto_acto1.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_templo_fotos.gd" id="2"]
+
+[node name="EgiptoTemploFotos" instance=ExtResource("1")]
+caida_inicio = false
+
+[node name="Fotos" type="Node" parent="."]
+script = ExtResource("2")
+carpeta = "C:/Users/SANTIA~1.OCH/AppData/Local/Temp/claude/c--Users-santiago-ochoa-godot/72b0ae8d-4bfa-4d0a-b1e3-1036372a8628/scratchpad/templo/video"
