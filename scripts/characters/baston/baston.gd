@@ -101,6 +101,28 @@ var magia := 1.0
 var _mostrada := 1.0
 var _color := 0
 var _datos: Dictionary = {}
+## EL BASTON EN LA CAIDA DEL CIELO (2026-10-28, Egipto): con en_caida, caida,
+## tumbado y levantarse llevan el baston por detras del cuerpo
+## (baston_caida.json, de tools/anim/baston_caida.py: aparece al estamparse).
+## Apagado, como estaba: en la hojarasca cae sin baston (lo encuentra despues).
+const CAIDA := "res://assets/characters/baston/baston_caida.json"
+var en_caida := false:
+	set(v):
+		en_caida = v
+		if is_node_ready():
+			_colocar()
+var _caida: Dictionary = {}
+## EL BASTON A LA ESPALDA FLOTANDO (2026-10-29, Egipto): con en_flotar, la caida
+## de lo alto (flotar_bajar, flotar_quieto, flotar_posarse) lo lleva a la espalda
+## como el salto y el reposo (baston_flotar.json, de tools/anim/baston_flotar.py).
+## Apagado, como estaba: en la hojarasca flota sin el.
+const FLOTAR := "res://assets/characters/baston/baston_flotar.json"
+var en_flotar := false:
+	set(v):
+		en_flotar = v
+		if is_node_ready():
+			_colocar()
+var _flotar: Dictionary = {}
 var _sprite: AnimatedSprite2D
 var _visible_anim := true
 var _alfa := 1.0
@@ -133,6 +155,10 @@ func _ready() -> void:
 	_sprite.animation_changed.connect(_colocar)
 	_sprite.animation_changed.connect(_hacer_pendiente)
 	_mano = JSON.parse_string(FileAccess.open(MANO, FileAccess.READ).get_as_text())
+	if FileAccess.file_exists(CAIDA):
+		_caida = JSON.parse_string(FileAccess.open(CAIDA, FileAccess.READ).get_as_text())
+	if FileAccess.file_exists(FLOTAR):
+		_flotar = JSON.parse_string(FileAccess.open(FLOTAR, FileAccess.READ).get_as_text())
 	if not particulas:
 		for p in [_recarga, _estallido, _chispas]:
 			p.emitting = false
@@ -363,6 +389,13 @@ func _colocar() -> void:
 	$Madera/Funda.modulate.a = 0.0
 	_cortar(1.0)
 	var lista = _datos.get(String(_sprite.animation))
+	if en_caida and _caida.has(String(_sprite.animation)):
+		_colocar_en_caida(_caida[String(_sprite.animation)])
+		return
+	# (la bola, como en el salto: su resplandor encima, asomando tras la capucha)
+	if en_flotar and _flotar.has(String(_sprite.animation)):
+		_colocar_en_caida(_flotar[String(_sprite.animation)], 2)
+		return
 	if lista == null:
 		_visible_anim = false
 		visible = false
@@ -395,6 +428,26 @@ func _colocar() -> void:
 	var parche: float = f[4] if f.size() > 4 else 0.0
 	$Madera/Funda.modulate.a = parche
 	_cortar(CORTE_ESPALDA / $Madera.texture.get_height() if f[3] == 1 else 1.0)
+
+## Caida, tumbado, levantarse (en_caida) y flotando (en_flotar): [x, y, giro,
+## visible, corte].
+func _colocar_en_caida(lista: Array, luz_z: int = 0) -> void:
+	var f: Array = lista[mini(_sprite.frame, lista.size() - 1)]
+	if int(f[3]) < 0:
+		_visible_anim = false
+		visible = false
+		return
+	_visible_anim = true
+	var x: float = f[0]
+	var giro: float = f[2]
+	if _sprite.flip_h:
+		x = -x
+		giro = -giro
+	position = _sprite.position + _sprite.offset + Vector2(x, f[1])
+	rotation = giro
+	z_index = -1
+	_luz.z_index = luz_z
+	_cortar(float(f[4]))
 
 func _cortar(fraccion: float) -> void:
 	($Madera.material as ShaderMaterial).set_shader_parameter("corte", fraccion)

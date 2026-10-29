@@ -117,6 +117,26 @@ extends Node2D
 ## demasiado": x2, 1,27 s de pie (48 fotogramas por segundo, todos).
 ## 2026-10-22: a probar algo mas despacio: x1,3 lento, x1,4 (1,81 s de pie). Antes 2,0.
 @export var giro_ritmo: float = 1.4
+## GIRO AGIL (2026-10-28, Egipto). El usuario: cambiando de sentido andando "gira,
+## y para mucho y luego arranca, se hace muy tedioso"; y "tendria dos modos": en
+## la hojarasca (o la arena, lo pesado) el giro entero queda bien; en la piedra,
+## agil. Medido: del giro, del fotograma ~40 al 60 el cuerpo ya esta girado y
+## solo se asienta la capa (~0,55 s quieto), y luego el arranque desde parado.
+## Sin perder calidad (lo pidio asi): la cola del giro (giro_cola_desde) a
+## giro_cola_ritmo veces mas deprisa, sin pasar de 60 fotogramas por segundo (no
+## se salta ninguno), y con la tecla hacia el lado nuevo sale en giro_salida
+## al fotograma giro_salida_arranque de arranque_andar (silueta 0,86 %, menos
+## que entre dos pasos). Salir antes se probo: en el 45 casaba la postura con el
+## 6 del arranque, pero el estampado de la tunica de los dos videos no (los
+## triangulos cambiaban de golpe). Apagado: la escena que lo quiera lo enciende.
+@export var giro_agil := false
+## El ritmo del giro en el modo agil (el usuario, con el 1,4: "aun esta torpon";
+## 2,0 = todos sus fotogramas a 48 por segundo, 1,27 s de pie).
+@export var giro_ritmo_agil: float = 2.0
+@export var giro_cola_desde: int = 40
+@export var giro_cola_ritmo: float = 1.75
+@export var giro_salida: int = 58
+@export var giro_salida_arranque: int = 3
 ## Margen para que dos pulsaciones cuenten como doble y arranque a correr.
 @export var doble_pulsacion: float = 0.30
 ## Fraccion del arranque en la que el personaje todavia no ha movido los pies,
@@ -756,6 +776,26 @@ var limites_salto := Vector2(-INF, INF)
 ## arco de mas del salto andando (con el, de una mesa a un escalon pasaba por
 ## encima del escalon); por debajo del despegue cae con gravedad_caida.
 var _salto_borde := false
+## CAER DE ALTO (2026-10-28, Egipto). El usuario: dejandose caer de un borde
+## alto, "el caer de flotar (sin fisica de flotar) y caeria normal al suelo".
+## Si el suelo de mas alla del borde queda mas de esto por debajo, en el apogeo
+## del saltito pasa a la bajada de flotar (sus fotogramas, con la gravedad de
+## siempre: sin luz no hay fisica de flotar) y al tocar se posa. INF: nunca (lo
+## enciende la escena que lo quiera).
+@export var caida_flotar_desde := INF
+var _caida_alta := false
+## DEJARSE CAER (2026-10-29). El usuario: andando hacia el borde alto "se mete
+## un salto y luego cae... si yo no salto, no". Andando (no corriendo: a la
+## carrera el brinco se lee bien), sigue hasta que el pie pisa el vacio
+## (caida_filo px por delante; lo que anda en un tick) y cae de ahi sin subir: sin el agacharse ni el
+## impulso del salto, desde el fotograma caida_desde de "saltar" (el del aire
+## que mas se parece al andar por silueta), y luego la bajada de flotar. Si
+## salta el, el salto de siempre. Tambien de los bordes medianos (mas de
+## caida_sin_salto_desde px), con la caida del salto hasta tocar; los escalones
+## mas bajos, con el saltito de siempre.
+@export var caida_sin_salto_desde := 150.0
+@export var caida_filo := 4.0
+@export var caida_desde := 18
 ## SALTAR ENCIMA (2026-10-13). El usuario: "los saltos no valen para nada, no
 ## suben nada aunque pudieran" y "los de media altura, ademas de escalarlos,
 ## deberiamos poder saltarlos". Con el arco de siempre los pies pasaban del
@@ -1170,9 +1210,22 @@ func _physics_process(delta: float) -> void:
 	# personaje mirando a un sitio con el sprite de otro. Un salto pedido
 	# mientras tanto se guarda vivo y sale al terminar el giro (_al_terminar).
 	if _estado == Estado.GIRO:
-		_sprite.speed_scale = giro_ritmo
+		var ritmo := giro_ritmo_agil if giro_agil and not _giro_corriendo else giro_ritmo
+		_sprite.speed_scale = ritmo
 		if _salto_en_espera():
 			_salto_pedido = _reloj
+		elif giro_agil and not _giro_corriendo:
+			# GIRO AGIL: la cola, mas deprisa (a lo sumo un fotograma por tick)...
+			if _sprite.frame >= giro_cola_desde:
+				var fps := _sprite.sprite_frames.get_animation_speed(_sprite.animation)
+				_sprite.speed_scale = minf(ritmo * giro_cola_ritmo, 59.0 / fps)
+			# ...y con la tecla hacia alli, sale andando sin acabar de pararse
+			var sigue := 0.0 if _quiere_agacharse() else _eje()
+			if _sprite.frame >= giro_salida and not is_zero_approx(sigue) and signf(sigue) == signf(_giro_destino):
+				_mirar(_giro_destino)
+				_cambiar(Estado.ARRANQUE_ANDAR)
+				_sprite.set_frame_and_progress(giro_salida_arranque, 0.0)
+				_sprite.speed_scale = 1.0
 		return
 
 	# Soltar la tecla lanza la frenada. En los arranques, pasada la zona muerta,
@@ -1262,8 +1315,22 @@ func _physics_process(delta: float) -> void:
 	# Andando hacia un borde (SUELO VARIABLE): salta solo para despegar en el
 	# borde y dejarse caer al suelo de abajo, sin pararse.
 	if _borde_delante(direccion):
-		_saltar()
-		_salto_borde = true
+		var mas_alla: float = suelo_en.call(position.x + _mirando * 80.0)
+		var alta := mas_alla - position.y > caida_flotar_desde
+		if mas_alla - position.y > caida_sin_salto_desde and _puede_dejarse_caer(alta) and not _hueco_delante():
+			# (DEJARSE CAER: sigue andando hasta el filo y alli cae, sin saltito)
+			if float(suelo_en.call(position.x + _mirando * caida_filo)) > position.y + 2.0:
+				# (el nodo, los pies, ya sobre el vacio: si no, el suelo de debajo
+				# seguia siendo el del filo y la caida se paraba en el)
+				position.x += _mirando * caida_filo
+				_saltar()
+				_salto_borde = true
+				_caida_alta = alta
+				_dejarse_caer(alta)
+		else:
+			_saltar()
+			_salto_borde = true
+			_caida_alta = alta
 
 	# Salto guardado: sale en cuanto se puede. Va despues de lo de arriba a
 	# proposito: con la tecla pulsada, el corte del salto anterior ya ha salido
@@ -1998,6 +2065,35 @@ func _borde_delante(direccion: float) -> bool:
 	var delante: float = suelo_en.call(position.x + _mirando * (hasta_despegar + 1.0))
 	return delante > position.y + 2.0
 
+## DEJARSE CAER, no en un hueco: si mas alla del filo (en HUECO_HASTA px) el
+## suelo vuelve a la altura de aqui, el saltito lo cruza (lo que hacen los
+## niveles con los huecos: "el peregrino salta solo en el filo").
+const HUECO_HASTA := 700.0
+func _hueco_delante() -> bool:
+	var d := 20.0
+	while d <= HUECO_HASTA:
+		if float(suelo_en.call(position.x + _mirando * d)) <= position.y + 2.0:
+			return true
+		d += 20.0
+	return false
+
+## DEJARSE CAER: andando (no corriendo) y con la bajada de flotar para "saltar".
+func _puede_dejarse_caer(alta: bool) -> bool:
+	var corre := (_estado == Estado.CORRER or _estado == Estado.ARRANQUE_CORRER) and _velocidad() > velocidad_andar
+	return not corre and (not alta or (_flotar.has("flotar_bajar") and _flotar["_despegue"].has("saltar")))
+
+## DEJARSE CAER: recien puesto el salto, ya en el aire en el filo, parado en
+## vertical (sin la subida), y cayendo con la gravedad de siempre por los del
+## salto desde caida_desde hasta la pose de flotar y la bajada de flotar (alta)
+## o hasta tocar, repartidos en lo que cae (como la bajada de un salto).
+func _dejarse_caer(alta: bool) -> void:
+	_vuelo_de = &"saltar"
+	var fps := _sprite.sprite_frames.get_animation_speed(&"saltar")
+	_empezar_vuelo(float(caida_desde), 0.0, 0.0, gravedad_caida, fps)
+	_flota = alta
+	_flota_iv = float(caida_desde - flotar_desde)
+	_sprite.set_frame_and_progress(caida_desde, 0.0)
+
 ## SUELO VARIABLE: lo que el suelo de donde esta queda por debajo del nodo (px;
 ## negativo si esta mas alto: encima de un bloque al que ha saltado). En el aire
 ## el nodo sigue a la altura del despegue: es lo que el suelo de aterrizaje queda
@@ -2264,6 +2360,7 @@ func _salto_en_espera() -> bool:
 ## play() con el mismo nombre no rebobina, asi que antes esa pulsacion se
 ## tragaba pero subia el esfuerzo y cambiaba el impulso del salto en curso.
 func _saltar() -> void:
+	_caida_alta = false
 	_salto_pedido = -99.0
 	_salto_borde = false
 	var relanzar := _estado == Estado.SALTAR
@@ -2926,6 +3023,9 @@ func _volar(delta: float) -> float:
 			# Si ya flota (acabo de girarse subiendo), sigue por donde iba.
 			if not _flota:
 				_flota = _vuelo_de == &"salto_parado" and _flotar.has("flotar_bajar") and _luz >= flotar_luz_min
+				# (CAER DE ALTO: dejandose caer de un borde alto, sin luz)
+				if _caida_alta and _flotar.has("flotar_bajar") and _flotar["_despegue"].has(String(_vuelo_de)):
+					_flota = true
 				_flota_iv = 0.0
 	else:
 		# Bajando, en la luz el aire lo sostiene: no pasa de caida_max_luz. Si
