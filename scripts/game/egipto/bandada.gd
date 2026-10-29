@@ -15,7 +15,7 @@ extends Node2D
 ##     alla), repartidas sin pisarse; las demas se van. Las palomas sueltas de
 ##     cerca (vecinas, a menos de radio_vecinas) tambien se van.
 ##   - Si no hay caida (el piloto) y el peregrino llega andando, se espantan
-##     igual, todas a la vez.
+##     igual, todas a la vez. Y otra vez cuando han vuelto a comer (_rearmar).
 
 const ARRULLO := preload("res://assets/audio/palomas_arrullo.ogg")
 const ESPANTADA := preload("res://assets/audio/palomas_espantada.ogg")
@@ -101,7 +101,10 @@ func _plumaje() -> int:
 	return 0
 
 func _process(_delta: float) -> void:
-	if _espantada or peregrino == null:
+	if peregrino == null:
+		return
+	if _espantada:
+		_rearmar()
 		return
 	var p := peregrino.position
 	if p.x > _x.x - cerca and p.x < _x.y + cerca and absf(p.y - _y) < 400.0:
@@ -141,6 +144,20 @@ func espantar(origen: Vector2) -> void:
 		var pv := v as PajaroPosado
 		if pv and absf(pv.position.x - origen.x) < radio_vecinas:
 			pv.asustar(_rng.randf_range(0.15, 0.5), Vector2.INF, false)
+
+## Cuando han vuelto todas a comer (pajaro_posado.gd: las que se fueron vuelven a
+## su sitio al rato, con el peregrino lejos), la bandada vuelve a espantarse si
+## se acerca (2026-10-29, el usuario: "hay muchas palomas abajo en el suelo, si
+## pasamos se deberian asustar"; antes solo se espantaban una vez).
+func _rearmar() -> void:
+	if not palomas.any(func(b: PajaroPosado) -> bool: return b.comiendo):
+		return
+	for b in palomas:
+		if b.volando() or not b.visible:
+			return
+	_espantada = false
+	_arrullo.volume_db = arrullo_db
+	_arrullo.play(_rng.randf_range(0.0, 7.0))
 
 func _sitio(puestas: Array[Vector2]) -> Vector2:
 	for intento in 30:

@@ -134,6 +134,12 @@ func montar(d: Dictionary) -> void:
 		_espuma.visible = false
 		add_child(_espuma)
 
+func _ready() -> void:
+	# el video, abierto ya y en pausa (abrirlo al lanzar daba un tiron de ~150 ms)
+	if _video and not lanzado:
+		_video.play()
+		_video.paused = true
+
 ## De ancho, en unidades de su capa.
 func ancho() -> float:
 	return _quieto.texture.get_width() * scale.x
@@ -142,7 +148,7 @@ func lanzar() -> void:
 	if lanzado:
 		return
 	lanzado = true
-	_video.play()
+	_video.paused = false
 	_cantos.volume_db = cantos_db
 	_cantos.play()
 	# (el quieto hasta que el video tenga su primer fotograma)

@@ -45,10 +45,12 @@ const CAPAS := "res://assets/egipto/acto1/capas/capas.json"
 ## fundido de entrada una vez y luego sus 3 compases desde MUSICA_BUCLE.
 const MUSICA := preload("res://assets/audio/musica_egipto_acto1_intro.ogg")
 const MUSICA_BUCLE := 4.819396
-## El tema (tools/egipto/musica_tema.py): al lanzarse el templo del cortejo,
-## donde acaba la vuelta de la intro (en su golpe, como en la pista original), y
-## luego se repite el solo, sin volver a la intro.
+## El tema (tools/egipto/musica_tema.py): al acabar el video del templo del
+## cortejo (el usuario: "aparece demasiado pronto ... que empiece justo cuando se
+## acaba la animacion y mientras mantener el otro bucle"), en el golpe del
+## siguiente compas de la intro, y luego se repite el solo, sin volver a la intro.
 const MUSICA_TEMA := preload("res://assets/audio/musica_egipto_acto1_tema.ogg")
+const MUSICA_COMPAS := 5.9230   # los compases de la intro (musica_bucle.py)
 ## El templo del cortejo en la orilla de enfrente (tools/egipto/templo_rio.py):
 ## su video se lanza al llegar a lo alto del altar.
 const TEMPLO := "res://assets/egipto/acto1/templo/templo.json"
@@ -601,8 +603,8 @@ func _ver_templo() -> void:
 	await get_tree().create_timer(1.5).timeout
 	_templo.cantos_db = templo_cantos_db
 	_templo.lanzar()
-	_musica_tema()
 	await _templo.acabado
+	_musica_tema()
 	await get_tree().create_timer(1.0).timeout
 	_bandas_objetivo = 0.0
 	_fin_cinematica()
@@ -1316,7 +1318,7 @@ func _musica() -> void:
 	var tw := create_tween()
 	tw.tween_property(p, "volume_db", musica_db, musica_entrada).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
-## Que entre el tema en cuanto acabe la vuelta del bucle de la intro.
+## Que entre el tema en el golpe del siguiente compas de la intro.
 func _musica_tema() -> void:
 	if _musica_p == null:
 		return
@@ -1327,20 +1329,27 @@ func _process(delta: float) -> void:
 	if _musica_al_tema:
 		_musica_cambio(delta)
 
-## El cambio, en la costura del bucle: si falta menos de medio fotograma para
-## el final, ya (se pierden unos ms de la cola, que es casi silencio antes del
-## golpe); si ya ha vuelto a empezar, el tema desde lo que se ha pasado. (Sin
-## AudioServer.get_time_since_last_mix: grabando con --write-movie lo adelantaba
-## 136 ms; la posicion de la ultima mezcla va como mucho una mezcla tarde, y
-## eso lo recoge lo de "ya ha vuelto a empezar".)
+## El cambio, en el golpe de un compas: si falta menos de medio fotograma, ya
+## (se pierden unos ms de la cola); si ya ha pasado (o el bucle ha vuelto a
+## empezar), el tema desde lo que se ha pasado. Lo que quedaba de la intro se
+## apaga en un momento. (Sin AudioServer.get_time_since_last_mix: grabando con
+## --write-movie lo adelantaba 136 ms; la posicion de la ultima mezcla va como
+## mucho una mezcla tarde, y eso lo recoge lo de "ya ha pasado".)
 func _musica_cambio(delta: float) -> void:
 	var p := _musica_p
 	var pos := p.get_playback_position()
 	var desde := -1.0
 	if pos < _musica_pos - 1.0:
 		desde = maxf(pos - MUSICA_BUCLE, 0.0)
-	elif p.stream.get_length() - pos < delta * 0.5:
-		desde = 0.0
+	else:
+		# el siguiente golpe (el ultimo es el final del fichero)
+		var golpe := minf(MUSICA_BUCLE + ceilf((_musica_pos - MUSICA_BUCLE + 0.001) / MUSICA_COMPAS) * MUSICA_COMPAS, p.stream.get_length())
+		if _musica_pos < MUSICA_BUCLE:
+			golpe = MUSICA_BUCLE
+		if pos >= golpe:
+			desde = pos - golpe
+		elif golpe - pos < delta * 0.5:
+			desde = 0.0
 	_musica_pos = pos
 	if desde < 0.0:
 		return
@@ -1352,8 +1361,9 @@ func _musica_cambio(delta: float) -> void:
 	t.volume_db = p.volume_db
 	add_child(t)
 	t.play(desde)
-	p.stop()
-	p.queue_free()
+	var tw := create_tween()
+	tw.tween_property(p, "volume_db", MusicAmbience.SILENCIO, 0.35)
+	tw.tween_callback(p.queue_free)
 	_musica_p = t
 
 ## La orilla de enfrente: el viento en su vegetacion (con su mascara, la pieza
