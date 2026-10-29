@@ -50,6 +50,8 @@ var _espuma: ColorRect
 var _espuma_mat: ShaderMaterial
 ## Cuanto sigue el barco rio abajo antes de quitarlo (s).
 var barco_dura := 90.0
+## Lo que tarda en meterse en el agua tras el relevo (templo.json "hundir").
+var hundir_en := 1.5
 
 func montar(d: Dictionary) -> void:
 	_px = float(d.get("px", 1.0))
@@ -177,9 +179,16 @@ func _process(delta: float) -> void:
 	var tex := _barco_fot[i]
 	_barco.texture = tex
 	_barco_reflejo.texture = tex
+	# un poco mas metido en el agua, poco a poco tras el relevo: lo de abajo,
+	# recortado, y el barco bajado lo mismo (la linea del agua no se mueve)
+	var hondo := float(_barco_d.get("hundir", 0.0)) * smoothstep(0.0, hundir_en, _barco_t)
+	var sz := tex.get_size() - Vector2(0.0, hondo)
+	for s in [_barco, _barco_reflejo]:
+		s.region_enabled = true
+		s.region_rect = Rect2(Vector2.ZERO, sz)
 	var x := float(_barco_d["x"]) + float(_barco_d["velocidad"]) * _barco_t
-	_barco.position = Vector2(x, float(_barco_d["y"]))
-	_barco_reflejo.position = Vector2(x, float(_barco_d["y"]) + _barco.texture.get_height())
+	_barco.position = Vector2(x, float(_barco_d["y"]) + hondo)
+	_barco_reflejo.position = Vector2(x, float(_barco_d["y"]) + tex.get_height())
 	# la espuma, con el barco; el remo salpica en sus fotogramas
 	var esp: Dictionary = _barco_d["espuma"]
 	_espuma.position = Vector2(x - ESTELA * _px, float(_barco_d["y"]) + float(esp["linea"]) - 6.0 * _px)

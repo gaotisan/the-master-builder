@@ -220,6 +220,15 @@ def recortar(bgr):
 # ---- el barco (px del video)
 RELEVO = 556         # el ultimo fotograma del video con el barco: luego, el suelto
 PROA = 548           # (en el 556 la punta de la proa ya se sale del video: la de aqui)
+# el video lleva su barco unos fotogramas mas, debajo del suelto (que ya esta
+# encima): con el video entero, en el juego el barco desaparecia un instante en el
+# relevo (el fotograma que se ve va un poco por delante de stream_position)
+SOLAPE = 3
+# el barco suelto, un poco mas metido en el agua (el usuario: "para que lo que se
+# vea por debajo sea mas uniforme"): px del video que se hunde, poco a poco tras
+# el relevo (TemploRio)
+HUNDIR = 8
+HUECO_MAX = 60       # px del hueco mas grande que se rellena en el remero de atras
 RECORTE = (760, 380, 1280, 650)    # x0, y0, x1, y1 donde se busca el barco
 POR_FOTOGRAMA = 4.87 # px que avanza (seguido con subpixel del 526 al 556; luego el video da un salto)
 BANDA = (790, 395)   # desde aqui (x, y) el video lleva el barco borrado (la gente, a la izquierda)
@@ -442,7 +451,7 @@ def video(destino, ult, tramos):
         ok, f = cap.read()
         if not ok:
             break
-        if k > RELEVO:
+        if k > RELEVO + SOLAPE:
             f = sin_barco(f, ult, ult_gris, mascara, peso)
         f = igualar(f, k, tramos)
         ff.stdin.write(np.ascontiguousarray(recortar(f)).tobytes())
@@ -548,12 +557,21 @@ def barco(carpeta, ult, tramos):
         sil = cv2.morphologyEx((a > 0.3).astype(np.uint8), cv2.MORPH_CLOSE, np.ones((9, 9), np.uint8))
         lleno = sil.copy()
         cv2.floodFill(lleno, np.zeros((alto + 2, ancho + 2), np.uint8), (0, 0), 1)
-        a = np.maximum(a, (sil | (lleno == 0)).astype(np.float32) * zona_m)
+        # (solo los pequenos: cuando el remo cruza, la pared que queda encerrada
+        # entre el remo, las piernas y la popa se llenaba entera)
+        n, lab, st, _ = cv2.connectedComponentsWithStats(((lleno == 0) & (sil == 0)).astype(np.uint8))
+        huecos = np.isin(lab, [c for c in range(1, n) if st[c, 4] <= HUECO_MAX])
+        a = np.maximum(a, (sil | huecos).astype(np.float32) * zona_m)
         al = np.maximum(rigido, a)
         # solo lo pegado al barco
         n, lab, st, _ = cv2.connectedComponentsWithStats((al > 0.4).astype(np.uint8))
         grande = 1 + np.argmax(st[1:, 4])
         al *= cv2.dilate((lab == grande).astype(np.uint8), np.ones((3, 3), np.uint8))
+        # lo rigido, siempre con los px del RELEVO (el barco.png): con los de cada
+        # fotograma, el fondo que se ve a traves de la vela (clara) corria por ella
+        # y parecia semitransparente
+        r = (rigido * (1 - zona_m))[..., None]
+        fs = fs * (1 - r) + b[..., :3].astype(np.float32) * r
         rgba = np.dstack([fs, al * 255])
         # lo que cae fuera del video (la proa): la del barco.png
         fuera = (np.arange(ancho) + ox + dx) >= f.shape[1] - 1
@@ -587,6 +605,7 @@ def barco(carpeta, ult, tramos):
         "x": round(ox * REDUCE, 2), "y": round((oy - ARRIBA) * REDUCE, 2),
         "desde": d["fotograma"] / 24.0,
         "velocidad": round(POR_FOTOGRAMA * 24.0 * REDUCE, 2),
+        "hundir": round(HUNDIR * REDUCE, 2),
         # px de la textura del barco; "linea": la del agua (su borde de abajo)
         "espuma": {**{c: round((x - ox) * REDUCE, 2) for c, x in ESPUMA_X.items()},
                    "linea": round((CORTE - oy) * REDUCE, 2),
