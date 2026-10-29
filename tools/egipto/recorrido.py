@@ -159,6 +159,7 @@ BANDADA = {
 #     repisa: la cara de arriba de la repisa de la que cuelga una enredadera: sus
 #       hojas de arriba (adornos.py, _arriba) van detras y asoman por encima
 #     sombra: sombra de contacto en la piedra (lo apoyado delante)
+#     luz: la suya, fija (lo que ya trae la luz del sitio puesta)
 # Lo que va delante de la piedra toma la luz del sitio (lo que tiene detras en
 # la imagen del templo: en la sombra de un muro, mas oscuro).
 # (2026-10-28, el usuario: fuera la palmera, el gato y el brasero, "no pegan en
@@ -214,6 +215,14 @@ ADORNOS = [
     ["atrezzo_a_1", "pie", 818, 768, 0.4, False, 0, {"sombra": True}],
     ["atrezzo_a_3", "pie", 1222, 728, 0.4, False, 0, {"sombra": True}],
     ["atrezzo_a_2", "pie", 1495, 728, 0.38, True, 0, {"sombra": True}],
+    # EL ESCARABAJO EN EL FRENTE DEL ALTAR, en lugar del halcon (2026-10-29, el
+    # usuario: "que sea el escarabajo del simbolo que buscamos y sea una pista
+    # para ponerse ahi"; "sustituir el halcon... por el escarabajo"): la placa
+    # encajada en su hueco, con la luz y el color del hueco ya puestos
+    # (frente_escarabajo.py: sus px son los del templo HD, de ahi la escala; y
+    # la luz, la de lo que no se pisa del templo: pie_piedra.gdshader, fondo
+    # 0,86 por su frio)
+    ["frente_escarabajo", "pie", 1538.5, 221, 0.9, False, 0, {"luz": 0.84}],
 ]
 
 
@@ -257,7 +266,7 @@ def adornos_de(tam):
         else:
             yi0, yi1 = y, y + h * e / 1.8
         # (lo apoyado, menos: esta mas cerca que el muro, no le cae toda su sombra)
-        luz = 1.0 if op.get("detras") or op.get("hunde") else             luz_en(L, sol, xi0, xi1, yi0, yi1, fuerza=0.85 if ancla == "techo" else 0.55)
+        luz = op["luz"] if "luz" in op else 1.0 if op.get("detras") or op.get("hunde") else             luz_en(L, sol, xi0, xi1, yi0, yi1, fuerza=0.85 if ancla == "techo" else 0.55)
         d = {"tex": RES_ADORNOS + n + ".png", "x": round(X - w * e * 0.5, 1),
              "abajo": round(abajo, 1), "escala": e, "flip": flip,
              "ancho": round(w * e, 1), "alto": round(h * e, 1),
@@ -291,7 +300,8 @@ DELANTE = [
     # donde aparece el peregrino; sin las de la hoja cortada por arriba, como la
     # palmera delante_b_0: se veia el corte; ni donde se cae de la terraza:
     # tapaba al peregrino al tocar la arena)
-    ["delante_a_5", 4060.0, 1.0, False],
+    # (sin delante_a_5: tambien cortada en recto por la derecha, 2026-10-29; el
+    # usuario: "ya veremos, mas adelante iran mas ruinas de templos")
     # (sin delante_a_4: sus palmas venian cortadas en recto por el borde de la hoja)
     ["delante_c_2", 6260.0, 1.05, False],
 ]
@@ -347,8 +357,11 @@ def main():
 # (acciones_egipto.gd): andando hasta PELDANO; de un salto andando hasta SALTO;
 # trepando con el video mediano o el alto, en sus bandas (fuera de ellas las
 # manos no casan con el borde). Lo que no cae en ninguna no se sube: se avisa.
+# Y los escalones de PELDANO a ESCALON_MIN, que no deben existir (andando se ve
+# levitar; de un salto o dejandose caer, un tropiezo): se avisa tambien.
 DESPEJE = 310.0
-PELDANO = 52.0
+PELDANO = 15.0
+ESCALON_MIN = 60.0
 SALTO = 182.0
 BANDA_MEDIANA = (150.0, 195.0)
 BANDA_ALTA = (295.0, 425.0)
@@ -382,7 +395,9 @@ def comprobar_trepas(cajas):
     print("trepas:")
     for x, de, a, h in sorted(caras):
         modos = []
-        if h <= SALTO:
+        if h < ESCALON_MIN:
+            modos.append("ESCALON FEO (16-60: retocar)")
+        elif h <= SALTO:
             modos.append("salto")
         if BANDA_MEDIANA[0] <= h <= BANDA_MEDIANA[1]:
             modos.append("mediana")

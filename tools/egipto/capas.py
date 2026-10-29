@@ -14,7 +14,7 @@ Nada se pinta: recortes, rellenos de lo de alrededor y fundidos.
 
 Escribe assets/egipto/acto1/capas/ (trozos y capas.json, que el nivel carga
 ademas de la tira: las capas de aqui quitan las de la tira que nombran).
-Uso: python tools/egipto/capas.py [--vista carpeta]
+Uso: python tools/egipto/capas.py [--vista carpeta] [--solo-filas]
 """
 import json
 import os
@@ -265,8 +265,48 @@ def trocear(nombre, img, y_juego0, escala):
     for k, c in enumerate(range(0, img.shape[1], TROZO)):
         n = "%s_%d" % (nombre, k)
         guardar(n, img[:, c:c + TROZO])
-        out.append({"tex": RES + n + ".png", "x": X0 + c * escala, "y": y_juego0})
+        t = {"tex": RES + n + ".png", "x": X0 + c * escala, "y": y_juego0}
+        f = filas_con_algo(img[:, c:c + TROZO])
+        if f:
+            t["filas"] = f
+        out.append(t)
     return out
+
+
+# LAS FILAS CON ALGO (2026-10-29, rendimiento): de cada trozo con transparencia,
+# de la primera a la ultima fila que no es del todo transparente (con MARGEN_FILAS
+# de mas, por el filtro); el juego dibuja solo eso (region): las filas vacias
+# (la mitad de la arena, un 38 % de la orilla) costaban igual en la GPU.
+MARGEN_FILAS = 4
+
+
+def filas_con_algo(img):
+    if img.ndim < 3 or img.shape[2] < 4:
+        return None
+    filas = np.nonzero(img[..., 3].max(1) > 0)[0]
+    if len(filas) == 0:
+        return None
+    y0 = max(int(filas[0]) - MARGEN_FILAS, 0)
+    y1 = min(int(filas[-1]) + 1 + MARGEN_FILAS, img.shape[0])
+    if (y1 - y0) > img.shape[0] * 0.95:
+        return None
+    return [y0, y1]
+
+
+def solo_filas():
+    """Pone las filas en el capas.json que ya hay, de sus PNG (sin rehacer las capas)."""
+    ruta = os.path.join(DESTINO, "capas.json")
+    datos = json.load(open(ruta, encoding="utf-8"))
+    for c in datos["capas"]:
+        for t in c["trozos"]:
+            png = os.path.join(DESTINO, os.path.basename(t["tex"]))
+            f = filas_con_algo(cv2.imread(png, cv2.IMREAD_UNCHANGED))
+            if f:
+                t["filas"] = f
+            else:
+                t.pop("filas", None)
+        print(c["nombre"], [t.get("filas") for t in c["trozos"]][:3])
+    json.dump(datos, open(ruta, "w", encoding="utf-8"), indent=1)
 
 
 def lejos(vista):
@@ -500,7 +540,12 @@ AIRE_ORILLA = 0.08
 # contraste ~65. Aqui estaba al reves: la ciudad con 45 y la playa, lo mas
 # cercano, la mas plana (31) y la mas naranja)
 LUZ_CIUDAD = {"dL": 6.0, "db": 0.0, "da": -4.0, "contraste": 0.8, "croma": 0.75}
-LUZ_ARENA = {"dL": -10.0, "db": -10.0, "da": -2.0, "contraste": 1.35}
+# (2026-10-29, el usuario: la arena "tan naranja", rosada, y la piedra amarilla,
+# "parecen suelos distintos"; medido: arena a 58-64 grados de tono en Lab, la
+# piedra 72-75 y la banda media 77-79. Antes db -10, da -2: se le quitaba el
+# amarillo y quedaba teja. Ahora menos rojo y algo mas de amarillo: la arena a
+# ~69, de la familia de la piedra y algo mas calida que ella, maqueta A)
+LUZ_ARENA = {"dL": -10.0, "db": -8.5, "da": -5.0, "contraste": 1.35}
 HORIZONTE = None        # (lo pone lejos(): el color del aire)
 SILUETA = None          # (lo pone lejos(): la silueta de montanas y ciudad, para la lluvia)
 CALIMA_ORILLA = 0.12
@@ -807,6 +852,9 @@ def medio(vista):
 
 
 def main():
+    if "--solo-filas" in sys.argv:
+        solo_filas()
+        return
     os.makedirs(DESTINO, exist_ok=True)
     for f in os.listdir(DESTINO):
         if f.endswith(".png"):
@@ -847,6 +895,10 @@ def main():
             w = cv2.imread(os.path.join(DESTINO, os.path.basename(tr["tex"])), cv2.IMREAD_UNCHANGED).shape[1]
             datos["fin_suelo"] = round(tr["x"] + w * ESCALA, 1)
     json.dump(datos, open(os.path.join(DESTINO, "capas.json"), "w", encoding="utf-8"), indent=1)
+    # la arena de delante, del mismo suelo que la de detras (arena_delante.py)
+    if os.path.isdir(os.path.join(REFS, MEDIO["carpeta"])):
+        import arena_delante
+        arena_delante.main()
     # el templo del cortejo en la orilla (templo_rio.py): quita el de la torre
     if os.path.isdir(os.path.join(REFS, "egipto_templo_video")):
         import templo_rio

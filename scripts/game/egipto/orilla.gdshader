@@ -22,8 +22,12 @@ void vertex() {
 }
 
 void fragment() {
-	vec2 px = UV / TEXTURE_PIXEL_SIZE;
 	float m = texture(viento, UV).r;
+	// (sin viento y por encima del agua no se mueve nada: la imagen tal cual,
+	// que COLOR ya trae por el tinte; asi el cielo vacio y la piedra no pagan
+	// el ruido ni los senos. 2026-10-29, rendimiento)
+	if (m > 0.0 || UV.y > costa) {
+	vec2 px = UV / TEXTURE_PIXEL_SIZE;
 	// la racha: un ruido que cruza la orilla despacio (0.4 a 1.4)
 	float racha = 0.4 + texture(ruido, vec2(mundo.x * 0.00025 - TIME * 0.018, 0.37)).r * 1.0;
 	float fase = mundo.x * 0.011;
@@ -38,4 +42,5 @@ void fragment() {
 	dx += onda * mix(0.5, temblor, prof) * en_agua;
 	vec4 c = texture(TEXTURE, UV - vec2(dx, dy) * TEXTURE_PIXEL_SIZE);
 	COLOR = c * tinte;  // (no * COLOR: en fragment() ya trae la textura)
+	}
 }

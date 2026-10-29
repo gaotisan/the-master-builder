@@ -102,6 +102,8 @@ func _ready() -> void:
 	vp.add_child(nave)
 	# (morro abajo a la izquierda, como cae, y algo vuelta: se le ve el lomo al sol)
 	nave.rotation = Vector3(0.35, 0.55, 0.0)
+	# (la pose es fija: se pinta una vez y se queda; 2026-10-29, rendimiento)
+	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	_tex_capsula = vp.get_texture()
 	var sh := Shader.new()
 	sh.code = NavePosada.SHADER_AIRE

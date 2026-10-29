@@ -140,7 +140,6 @@ var _datos_capas: Dictionary = {}
 var _tira_capas: Array = []      # [CanvasLayer, paralaje x, paralaje y]
 var _con_tira := false
 var _arena_delante: CanvasLayer
-var _tex_contacto: ImageTexture
 var _tex_mota: Texture2D
 var _y_salto := NAN
 var _anim_antes := ""
@@ -195,8 +194,11 @@ func _ready() -> void:
 	# (los datos de movimiento de DarkStage, solo para estudiarlo)
 	$DarkStage/DatosMovimiento.visible = false
 	_musica()
-	_fondo()
 	_con_tira = ResourceLoader.exists(TIRA)
+	# (con la tira, su cielo opaco tapa toda la pantalla: el degradado de detras
+	# era una pasada a pantalla completa que no se veia; 2026-10-29, rendimiento)
+	if not _con_tira:
+		_fondo()
 	if _con_tira:
 		_montar_tira()
 	elif ResourceLoader.exists(FONDO):
@@ -664,8 +666,9 @@ func _montar_recorrido() -> void:
 			_cajas_en_uv(m, d, r["cajas"])
 		s.material = m
 		n.add_child(s)
-		_sombra_contacto(float(d["x"]), float(d["x"]) + float(d["ancho"]), suelo)
+		_pie_en_arena.append(s)
 	_montar_adornos(r, suelo)
+	_montar_borde_duro(suelo)
 	# las palomas posadas (se espantan al acercarse el peregrino), todas en un
 	# mismo estudio 3D (estudio_palomas.gd)
 	var estudio := EstudioPalomas.new()
@@ -741,6 +744,15 @@ func _montar_adornos(r: Dictionary, suelo: float) -> void:
 			s.z_as_relative = false
 			s.z_index = int(d["z"])
 		var padre: Node2D = detras if d.get("detras", false) else delante
+		# (lo apoyado en la arena, menos las dunas: con el borde nitido de la
+		# arena de delante; ver _montar_borde_duro)
+		# (las plantas, sin: se funden con la arena como las dunas)
+		if float(d["abajo"]) < 30.0:
+			var nombre := String(d["tex"]).get_file()
+			if nombre.begins_with("arena"):
+				_dunas_en_arena.append(s)
+			elif not nombre.begins_with("plantas"):
+				_pie_en_arena.append(s)
 		if d.get("sombra", false):
 			_sombra_apoyo(padre, s.position + Vector2(float(d["ancho"]) * 0.5, float(d["alto"])), float(d["ancho"]))
 		padre.add_child(s)
@@ -892,25 +904,97 @@ const PIE_PIEDRA := preload("res://scripts/game/egipto/pie_piedra.gdshader")
 
 ## La sombra de contacto de una pieza en la arena de delante (por delante de la
 ## arena, no de la pieza: va en la capa de la arena de delante).
-func _sombra_contacto(x0: float, x1: float, suelo: float) -> void:
+## EL BORDE NITIDO, SOLO AL PIE DE LO APOYADO (2026-10-29; el usuario: "hay una
+## linea rara donde se une las piedras con la arena... parece que son suelos
+## distintos"). El borde de la arena de delante se afilo para definir el pie del
+## templo (borde_arena.gdshader); en el resto, recto y duro, parecia el canto
+## de una losa. Aqui, una mascara a lo largo (PIE_TEXEL px por texel): donde lo
+## apoyado (piezas y adornos solidos: ni dunas ni plantas) es opaco justo encima del borde,
+## nitido; en lo demas, suave (las dunas de detras se funden con ella). Las
+## dunas que tapan el pie de una pieza cuentan como arena. La sombra de contacto
+## del pie, con la misma mascara (antes, una franja por pieza a todo su ancho:
+## con el templo, una raya oscura de lado a lado, tambien bajo los arcos).
+const PIE_TEXEL := 4.0
+const PIE_SUAVE := 6                    # texels de transicion a cada lado
+var _borde_mat: ShaderMaterial
+var _pie_en_arena: Array[Sprite2D] = []
+var _dunas_en_arena: Array[Sprite2D] = []
+
+## Lo opaco de esos sprites en los texels de la mascara, justo encima de la linea.
+func _opaco_en_linea(sprites: Array[Sprite2D], linea: float, x0: float, n: int) -> PackedFloat32Array:
+	var v := PackedFloat32Array()
+	v.resize(n)
+	for s in sprites:
+		var img := s.texture.get_image()
+		if img == null:
+			continue
+		if img.is_compressed():
+			img.decompress()
+		var e := s.scale.x
+		var w := img.get_width()
+		var h := img.get_height()
+		var r0 := s.region_rect.position.y if s.region_enabled else 0.0
+		var filas: Array[int] = []
+		for dy in [-22.0, -12.0, -4.0]:
+			var f := int((linea + dy - s.position.y) / e + r0)
+			if f >= 0 and f < h:
+				filas.append(f)
+		if filas.is_empty():
+			continue
+		for i in n:
+			var u := (x0 + (i + 0.5) * PIE_TEXEL - s.position.x) / e
+			if u < 0.0 or u >= w:
+				continue
+			var ui := w - 1 - int(u) if s.flip_h else int(u)
+			for f in filas:
+				v[i] = maxf(v[i], img.get_pixel(ui, f).a)
+	return v
+
+func _montar_borde_duro(suelo: float) -> void:
+	if _borde_mat == null or _pie_en_arena.is_empty():
+		return
+	var x0 := INF
+	var x1 := -INF
+	for s in _pie_en_arena:
+		x0 = minf(x0, s.position.x)
+		x1 = maxf(x1, s.position.x + s.texture.get_width() * s.scale.x)
+	x0 -= PIE_TEXEL * PIE_SUAVE * 2.0
+	x1 += PIE_TEXEL * PIE_SUAVE * 2.0
+	var n := int(ceil((x1 - x0) / PIE_TEXEL))
+	var linea := suelo + BORDE_ARENA          # el borde de la arena de delante
+	var piedra := _opaco_en_linea(_pie_en_arena, linea, x0, n)
+	var duna := _opaco_en_linea(_dunas_en_arena, linea, x0, n)
+	# (con su transicion: la media de los de alrededor)
+	var duro := PackedFloat32Array()
+	duro.resize(n)
+	var im := Image.create(n, 1, false, Image.FORMAT_RF)
+	for i in n:
+		var t := 0.0
+		for k in range(-PIE_SUAVE, PIE_SUAVE + 1):
+			var j := clampi(i + k, 0, n - 1)
+			t += piedra[j] * (1.0 - duna[j])
+		duro[i] = t / (2 * PIE_SUAVE + 1)
+		im.set_pixel(i, 0, Color(duro[i], 0, 0))
+	_borde_mat.set_shader_parameter("pie_tex", ImageTexture.create_from_image(im))
+	_borde_mat.set_shader_parameter("pie_x", Vector2(x0, n * PIE_TEXEL))
+	_sombra_contacto_mascara(duro, x0, suelo)
+
+## La sombra de contacto (corta y nitida, justo donde la arena corta la piedra),
+## solo donde la mascara dice que hay algo apoyado.
+func _sombra_contacto_mascara(duro: PackedFloat32Array, x0: float, suelo: float) -> void:
 	if _arena_delante == null:
 		return
-	if _tex_contacto == null:
-		var im := Image.create(128, 32, false, Image.FORMAT_RGBA8)
-		for y in 32:
-			for x in 128:
-				var v := float(y) / 31.0
-				var u := float(x) / 127.0
-				var borde := clampf(minf(u, 1.0 - u) / 0.06, 0.0, 1.0)
-				im.set_pixel(x, y, Color(0.14, 0.11, 0.12, 0.55 * pow(1.0 - v, 2.2) * borde))
-		_tex_contacto = ImageTexture.create_from_image(im)
+	var n := duro.size()
+	var im := Image.create(n, 32, false, Image.FORMAT_RGBA8)
+	for y in 32:
+		var a := 0.55 * pow(1.0 - float(y) / 31.0, 2.2)
+		for i in n:
+			im.set_pixel(i, y, Color(0.14, 0.11, 0.12, a * duro[i]))
 	var s := Sprite2D.new()
-	s.texture = _tex_contacto
+	s.texture = ImageTexture.create_from_image(im)
 	s.centered = false
-	# (justo donde la arena corta la piedra, corta y nitida: antes 70 px difusos
-	# sobre la rampa de la arena)
-	s.position = Vector2(x0 - 12.0, suelo + BORDE_ARENA - 2.0)
-	s.scale = Vector2((x1 - x0 + 24.0) / 128.0, 26.0 / 32.0)
+	s.position = Vector2(x0, suelo + BORDE_ARENA - 2.0)
+	s.scale = Vector2(PIE_TEXEL, 26.0 / 32.0)
 	_arena_delante.add_child(s)
 
 ## ---- la luz y el polvo del recorrido ---------------------------------------------
@@ -1140,6 +1224,7 @@ func _montar_tira() -> void:
 			agua_mat.set_shader_parameter("desde", float(c["agua"][0]))
 			agua_mat.set_shader_parameter("hasta", float(c["agua"][1]))
 			agua_mat.set_shader_parameter("ruido", _ruido_rachas())
+		var borde_mat: ShaderMaterial = null
 		for tr in c["trozos"]:
 			var s := Sprite2D.new()
 			s.texture = load(tr["tex"])
@@ -1148,9 +1233,12 @@ func _montar_tira() -> void:
 			elif c.get("viento", false):
 				s.material = _material_orilla(String(tr["tex"]), float(c.get("costa", 0.5)))
 			elif c.get("delante", false):
-				var bm := ShaderMaterial.new()
-				bm.shader = BORDE_ARENA_SHADER
-				s.material = bm
+				# (uno para todos los trozos: los mismos parametros)
+				if borde_mat == null:
+					borde_mat = ShaderMaterial.new()
+					borde_mat.shader = BORDE_ARENA_SHADER
+					_borde_mat = borde_mat
+				s.material = borde_mat
 			elif String(c["nombre"]) == "arena" and _solo_playa and not _acciones.recorrido.is_empty():
 				# (la arena de detras, a la altura del suelo: sin las sombras azules
 				# de palmera, que asomaban entre las piedras como agua)
@@ -1165,6 +1253,14 @@ func _montar_tira() -> void:
 			var ec: float = c.get("escala", e)
 			s.scale = Vector2(ec, ec)
 			s.position = Vector2(tr["x"], tr["y"])
+			# (solo las filas con algo, capas.py: las vacias se pintaban igual;
+			# el UV de los shaders sigue siendo el de la textura entera)
+			if tr.has("filas"):
+				var f0: float = tr["filas"][0]
+				var f1: float = tr["filas"][1]
+				s.region_enabled = true
+				s.region_rect = Rect2(0.0, f0, s.texture.get_width(), f1 - f0)
+				s.position.y += f0 * ec
 			if c.get("delante", false) and _solo_playa and FileAccess.file_exists(_acciones.RECORRIDO):
 				s.position.y -= ARENA_SUBE
 			s.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS

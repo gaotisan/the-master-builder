@@ -18,11 +18,28 @@ uniform float sin_sombra_uv = 0.14;
 uniform vec2 franja = vec2(-1.0, -1.0);
 uniform vec3 arena = vec3(0.747, 0.573, 0.499);   // medida en la imagen
 uniform float luz_sombra = 0.27;                  // luz media de la sombra
+// (2026-10-29) el borde nitido solo al pie de lo apoyado: pie_tex, a lo largo
+// del mundo desde pie_x.x en pie_x.y px (egipto_acto1.gd, _montar_borde_duro);
+// en lo demas, suave (desde_suave): las dunas de detras se funden con ella
+uniform sampler2D pie_tex : filter_linear;
+uniform vec2 pie_x = vec2(0.0, 0.0);
+uniform float desde_suave = 0.4;
+
+varying vec2 mundo;
+
+void vertex() {
+	mundo = (MODEL_MATRIX * vec4(VERTEX, 0.0, 1.0)).xy;
+}
 
 void fragment() {
 	vec4 c = COLOR;
 	if (franja.x < 0.0 && UV.y < hasta_uv) {
-		c.a = smoothstep(desde_a, hasta_a, c.a);
+		float duro = 1.0;
+		if (pie_x.y > 0.0) {
+			float u = (mundo.x - pie_x.x) / pie_x.y;
+			duro = (u > 0.0 && u < 1.0) ? texture(pie_tex, vec2(u, 0.5)).r : 0.0;
+		}
+		c.a = mix(smoothstep(desde_suave, 1.0, c.a), smoothstep(desde_a, hasta_a, c.a), duro);
 	}
 	float zona = 1.0 - smoothstep(sin_sombra_uv * 0.8, sin_sombra_uv, UV.y);
 	if (franja.x >= 0.0) {
@@ -32,10 +49,14 @@ void fragment() {
 	// (lo azul se mide en la textura emborronada, mip 3,5: con el pixel de cada
 	// sitio, el filo de cada sombra se quedaba a medias y dejaba rayas finas que
 	// vibraban al mover la camara)
-	vec4 b = textureLod(TEXTURE, UV, 3.5);
-	float azul = smoothstep(-0.02, 0.12, b.b - b.r);
-	float l = dot(b.rgb, vec3(0.299, 0.587, 0.114));
-	vec3 limpia = arena * mix(1.0, clamp(l / luz_sombra, 0.85, 1.1), 0.5);
-	c.rgb = mix(c.rgb, limpia, azul * zona);
+	// (solo en la zona que se limpia: fuera no cambia nada y la lectura de mas
+	// la pagaba toda la arena; 2026-10-29, rendimiento)
+	if (zona > 0.0) {
+		vec4 b = textureLod(TEXTURE, UV, 3.5);
+		float azul = smoothstep(-0.02, 0.12, b.b - b.r);
+		float l = dot(b.rgb, vec3(0.299, 0.587, 0.114));
+		vec3 limpia = arena * mix(1.0, clamp(l / luz_sombra, 0.85, 1.1), 0.5);
+		c.rgb = mix(c.rgb, limpia, azul * zona);
+	}
 	COLOR = c;
 }

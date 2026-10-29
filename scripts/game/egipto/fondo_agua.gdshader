@@ -25,6 +25,10 @@ void vertex() {
 
 void fragment() {
 	float en_agua = smoothstep(desde, desde + 0.004, UV.y) * (1.0 - smoothstep(hasta - 0.004, hasta, UV.y));
+	// (fuera del agua queda la imagen tal cual: COLOR ya trae la textura por el
+	// tinte; sin esto, todo lo de encima del rio, la ciudad entera, pagaba los
+	// senos y las dos lecturas de mas. 2026-10-29, rendimiento)
+	if (en_agua > 0.0) {
 	float prof = clamp((UV.y - desde) / max(hasta - desde, 0.001), 0.0, 1.0);     // 0 lejos, 1 cerca
 	vec2 px = UV / TEXTURE_PIXEL_SIZE;
 	// el vaiven: bandas horizontales que se ondulan, mas anchas y mas fuertes cerca
@@ -43,4 +47,5 @@ void fragment() {
 	float brillo = smoothstep(0.93, 1.0, chispa) * smoothstep(0.62, 0.82, lum) * en_agua * (1.0 - racha);
 	c.rgb += vec3(1.0, 0.95, 0.85) * brillo * destellos;
 	COLOR = c * tinte;  // (no * COLOR: en fragment() ya trae la textura)
+	}
 }

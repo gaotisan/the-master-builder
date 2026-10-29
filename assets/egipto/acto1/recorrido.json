@@ -25,7 +25,7 @@
   {
    "x0": -120.0,
    "x1": 312.0,
-   "arriba": 89.6,
+   "arriba": 116.6,
    "abajo": 0.0,
    "pieza": "templo_terrazas",
    "nombre": "c000"
@@ -97,8 +97,8 @@
   {
    "x0": 1329.0,
    "x1": 1536.0,
-   "arriba": 926.6,
-   "abajo": 872.6,
+   "arriba": 908.6,
+   "abajo": 854.6,
    "pieza": "templo_terrazas",
    "nombre": "c009"
   },
@@ -301,7 +301,7 @@
   {
    "tex": "res://assets/egipto/acto1/adornos/colgantes_b_1.png",
    "x": 1343.6,
-   "abajo": 538.0,
+   "abajo": 520.0,
    "escala": 0.5,
    "flip": true,
    "ancho": 104.0,
@@ -309,14 +309,14 @@
    "ancla": "techo",
    "vaiven": 10,
    "nombre": "colgantes_b_1",
-   "luz": 0.96,
+   "luz": 0.964,
    "detras": false,
    "sombra": false
   },
   {
    "tex": "res://assets/egipto/acto1/adornos/colgantes_b_1_arriba.png",
    "x": 1343.6,
-   "abajo": 875.1,
+   "abajo": 857.1,
    "escala": 0.5,
    "flip": true,
    "ancho": 104.0,
@@ -798,17 +798,24 @@
    "luz": 0.974,
    "detras": false,
    "sombra": true
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/frente_escarabajo.png",
+   "x": 2513.4,
+   "abajo": 1023.8,
+   "escala": 0.9,
+   "flip": false,
+   "ancho": 271.8,
+   "alto": 129.6,
+   "ancla": "pie",
+   "vaiven": 0,
+   "nombre": "frente_escarabajo",
+   "luz": 0.84,
+   "detras": false,
+   "sombra": false
   }
  ],
  "delante": [
-  {
-   "tex": "res://assets/egipto/acto1/adornos/delante_a_5.png",
-   "x": 4060.0,
-   "escala": 1.0,
-   "flip": false,
-   "ancho": 390.0,
-   "alto": 808.0
-  },
   {
    "tex": "res://assets/egipto/acto1/adornos/delante_c_2.png",
    "x": 6260.0,
@@ -823,7 +830,7 @@
    [
     6.0,
     285.0,
-    90.0,
+    116.6,
     5.0
    ],
    [
@@ -852,7 +859,7 @@
    [
     1347.0,
     1500.0,
-    927.0
+    909.0
    ]
   ]
  }

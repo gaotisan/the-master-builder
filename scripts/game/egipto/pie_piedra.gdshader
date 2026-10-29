@@ -19,7 +19,9 @@ uniform float canto_suave = 0.01; // (UV) la transicion del canto al muro
 void fragment() {
 	// (COLOR ya trae la textura por el modulate: no volver a multiplicarla)
 	vec4 c = COLOR;
-	if (n_cajas > 0) {
+	// (lo transparente de la pieza, sin el bucle de las cajas: no cambia nada y
+	// es mucho del rectangulo del templo; 2026-10-29, rendimiento)
+	if (n_cajas > 0 && c.a > 0.0) {
 		float canto = 0.0;
 		float arriba = 0.0;
 		for (int i = 0; i < n_cajas; i++) {

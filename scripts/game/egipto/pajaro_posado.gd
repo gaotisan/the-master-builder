@@ -485,6 +485,10 @@ func _nueva_accion() -> void:
 func _process(delta: float) -> void:
 	_t += delta
 	_t_estado += delta
+	# (posada y fuera de la pantalla no se ve: sin animarla; el peregrino solo
+	# la espanta de cerca, ya en pantalla. 2026-10-29, rendimiento)
+	if _estado == "posada" and _fuera_de_pantalla():
+		return
 	match _estado:
 		"posada":
 			_en_posada(delta)

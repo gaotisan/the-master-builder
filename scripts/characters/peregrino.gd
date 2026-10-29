@@ -816,6 +816,10 @@ var _caida_alta := false
 @export var salto_encima_alcance: float = 300.0
 @export var salto_encima_holgura: float = 24.0
 @export var salto_encima_empuje_max: float = 1.4
+## De parado SIN tecla, tambien sube a la cara de delante si la tiene a menos de
+## esto (px; 0: nunca, salta en el sitio). Egipto (2026-10-29, sin escalones que
+## se anden): parado delante de un escalon, saltar lo sube.
+@export var salto_encima_parado_cerca: float = 0.0
 ## Lo que el nodo pasa de la cara antes de que el cuerpo baje de alli.
 const ENCIMA_PASA := 12.0
 ## Saltando a algo bajo, el arco no baja de esto por el de siempre (del
@@ -2985,8 +2989,10 @@ func _volar(delta: float) -> float:
 		# SALTAR ENCIMA: sin luz, el andando, y el de parado con la tecla hacia delante
 		var hacia := 0.0 if control_bloqueado else Input.get_axis("mover_izquierda", "mover_derecha")
 		var encima := {}
+		var parado_cerca := salto_encima_parado_cerca > 0.0 and is_zero_approx(hacia) \
+				and suelo_en.is_valid() and not _cara_delante(salto_encima_parado_cerca).is_empty()
 		if suelo_en.is_valid() and luz0 <= 0.0 and not _salto_borde and (_sprite.animation == &"saltar" \
-				or (_sprite.animation == &"salto_parado" and signf(hacia) == _mirando)):
+				or (_sprite.animation == &"salto_parado" and (signf(hacia) == _mirando or parado_cerca))):
 			encima = _salto_encima(v, amp, fps, _impulso)
 			if not encima.is_empty():
 				amp = encima["amp"]

@@ -64,6 +64,16 @@ void fragment() {
 ## cuantas van por el aire (todas las naves): una sola cada vez
 static var _volando := 0
 
+## EL 3D SOLO CUANDO CAMBIA (2026-10-29, rendimiento: los SubViewports 3D se
+## llevaban 9-17 ms por fotograma, el 65-70 %): posada y ya asentada (pasado
+## el rebote, ASENTADA s) solo late la luz, despacio (un ciclo en ~5 s): se
+## repinta REPINTA_POSADA veces por segundo; fuera no se ve y no se pinta;
+## despegando y llegando, cada fotograma.
+const ASENTADA := 2.5
+const REPINTA_POSADA := 10.0
+var _vp: SubViewport
+var _repinta := 0.0
+
 var _nave: Nave3D
 var _img: Sprite2D
 var _sombra: Sprite2D
@@ -75,6 +85,7 @@ var _rng := RandomNumberGenerator.new()
 func _ready() -> void:
 	_rng.randomize()
 	var vp := SubViewport.new()
+	_vp = vp
 	vp.size = Vector2i(320, 200)
 	vp.transparent_bg = true
 	vp.own_world_3d = true
@@ -277,6 +288,20 @@ func _mover(delta: float) -> void:
 	_sombra.position = Vector2(ancho * 0.18, 0.0)
 	_sombra.scale = Vector2(ancho * 1.1, ancho * 0.12) / 32.0 * lerpf(0.6, 1.0, cerca)
 	_sombra.modulate.a = 0.5 * cerca * _img.modulate.a
+	_ritmo_3d(delta)
+
+func _ritmo_3d(delta: float) -> void:
+	_img.visible = estado != "fuera"
+	if estado == "fuera":
+		_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	elif estado == "posada" and _t > ASENTADA:
+		_repinta -= delta
+		if _repinta <= 0.0:
+			_repinta += 1.0 / REPINTA_POSADA
+			_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+	else:
+		_repinta = 0.0
+		_vp.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 
 func _cambiar(nuevo: String, dura: float) -> void:
 	var antes := estado in ["despega", "llega"]

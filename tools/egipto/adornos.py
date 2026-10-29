@@ -48,6 +48,9 @@ NOMBRES = {
     # Downloads, no de elementos_egipto: copiadas a mano)
     "Hoja de sprites de dunas desérticas.png": "arena_dunas_a",
     "Hoja de sprites de dunas desérticas (1).png": "arena_dunas_b",
+    # la placa del escarabajo alado (2026-10-29, ChatGPT; de Downloads): sobre
+    # el altar, el simbolo que se busca, la pista para ponerse alli
+    "Placa egipcia del escarabajo solar.png": "placa_escarabajo",
 }
 
 # las hojas con los objetos muy juntos: junta mas fina al separar
@@ -159,8 +162,13 @@ def sin_llama(bgra):
 #   arena: al color de la arena seca de la playa (medio_arena, junto a la linea
 #   del suelo: Lab medido), con su sombreado algo suavizado
 #   lo demas: menos croma y menos contraste (verde polvoriento, barro apagado)
-ARENA = {"L": 170.0, "a": 141.6, "b": 152.5, "kL": 0.75, "kab": 0.45}
-APAGAR = {"plantas": (0.72, 0.88), "colgantes": (0.74, 0.9), "atrezzo": (0.66, 0.86)}
+# (2026-10-29: con la arena de la playa, a ~68 grados de tono, menos teja; antes
+# a 141.6, b 152.5; capas.py, LUZ_ARENA)
+ARENA = {"L": 170.0, "a": 138.5, "b": 154.0, "kL": 0.75, "kab": 0.45}
+APAGAR = {"plantas": (0.72, 0.88), "colgantes": (0.74, 0.9), "atrezzo": (0.66, 0.86),
+          # (la placa, menos apagada: es la pista, tiene que leerse; su pintura
+          # verde y roja, algo mas viva que la piedra)
+          "placa": (0.85, 0.94)}
 
 
 def armonizar(bgra, nombre):
@@ -240,6 +248,11 @@ def main():
             piezas.guardar(os.path.join(DESTINO, n + ".png"), p)
             datos[n] = [p.shape[1], p.shape[0]]
         print(nombre, sum(1 for k in datos if k.startswith(nombre + "_")))
+    # el frente del altar con el escarabajo (de la placa: frente_escarabajo.py)
+    import frente_escarabajo
+    p = frente_escarabajo.hacer(os.path.join(DESTINO, "placa_escarabajo_0.png"))
+    piezas.guardar(os.path.join(DESTINO, "frente_escarabajo.png"), p)
+    datos["frente_escarabajo"] = [p.shape[1], p.shape[0]]
     datos["_colgar"] = colgar
     json.dump(datos, open(os.path.join(DESTINO, "adornos.json"), "w", encoding="utf-8"), indent=1)
     del datos["_colgar"]

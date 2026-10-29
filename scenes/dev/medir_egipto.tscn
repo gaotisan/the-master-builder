@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/dev/egipto_acto1.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/dev/medir_rendimiento.gd" id="2"]
+
+[node name="MedirEgipto" instance=ExtResource("1")]
+caida_inicio = false
+
+[node name="Medir" type="Node" parent="."]
+script = ExtResource("2")
+puntos = [-330.0, 400.0, 1000.0, 1700.0, 2400.0, 3000.0, 3700.0, 5700.0, 7600.0, 10300.0, 12300.0, 14800.0, 16450.0, 19200.0]

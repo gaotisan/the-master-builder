@@ -340,11 +340,7 @@ func _nivel(x: float) -> float:
 ## Yendo desde x hacia d a la altura y: donde cambia la altura ({x, y, objeto})
 ## o {} si no cambia hasta el final.
 func _siguiente(x: float, y: float, d: float) -> Dictionary:
-	var puntos: Array = []
-	for o in _obj:
-		puntos.append([o.x0, o])
-		puntos.append([o.x1(), o])
-	puntos.sort_custom(func(a, b): return a[0] * d < b[0] * d)
+	var puntos := _puntos_ordenados(d)
 	# (los bordes de un hueco pequeno entre dos objetos no cuentan: _nivel ya lo
 	# llena, y lo que cambia la altura es la cara del otro)
 	for p in puntos:
@@ -360,6 +356,28 @@ func _siguiente(x: float, y: float, d: float) -> Dictionary:
 					o = q
 			return {"x": b, "y": y2, "objeto": o}
 	return {}
+
+## Las caras de los objetos ordenadas hacia d (2026-10-29, rendimiento: se
+## montaban y ordenaban varias veces por tick, ~1 ms; los objetos solo se mueven
+## al empujarlos o tirar de ellos): guardadas mientras no cambie ninguno.
+var _puntos_firma := PackedFloat64Array()
+var _puntos_de := {}
+func _puntos_ordenados(d: float) -> Array:
+	var firma := PackedFloat64Array()
+	for o in _obj:
+		firma.append(o.x0)
+		firma.append(o.x1())
+	if firma != _puntos_firma:
+		_puntos_firma = firma
+		_puntos_de.clear()
+	if not _puntos_de.has(d):
+		var puntos: Array = []
+		for o in _obj:
+			puntos.append([o.x0, o])
+			puntos.append([o.x1(), o])
+		puntos.sort_custom(func(a, b): return a[0] * d < b[0] * d)
+		_puntos_de[d] = puntos
+	return _puntos_de[d]
 
 func _baston() -> Node:
 	for c in _peregrino.get_children():

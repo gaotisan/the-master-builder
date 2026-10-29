@@ -77,47 +77,83 @@
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_0.png",
      "x": -800.0,
-     "y": -2478.5
+     "y": -2478.5,
+     "filas": [
+      679,
+      3332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_1.png",
      "x": 1657.6,
-     "y": -2478.5
+     "y": -2478.5,
+     "filas": [
+      615,
+      3332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_2.png",
      "x": 4115.2,
-     "y": -2478.5
+     "y": -2478.5,
+     "filas": [
+      629,
+      3332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_3.png",
      "x": 6572.799999999999,
-     "y": -2478.5
+     "y": -2478.5,
+     "filas": [
+      625,
+      3332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_4.png",
      "x": 9030.4,
-     "y": -2478.5
+     "y": -2478.5,
+     "filas": [
+      645,
+      3332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_5.png",
      "x": 11488.0,
-     "y": -2478.5
+     "y": -2478.5,
+     "filas": [
+      610,
+      3332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_6.png",
      "x": 13945.599999999999,
-     "y": -2478.5
+     "y": -2478.5,
+     "filas": [
+      631,
+      3332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_7.png",
      "x": 16403.2,
-     "y": -2478.5
+     "y": -2478.5,
+     "filas": [
+      655,
+      3332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/lejos_ciudad_8.png",
      "x": 18860.8,
-     "y": -2478.5
+     "y": -2478.5,
+     "filas": [
+      821,
+      3332
+     ]
     }
    ]
   },
@@ -134,42 +170,74 @@
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_0.png",
      "x": -800.0,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      466,
+      1286
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_1.png",
      "x": 1657.6,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      418,
+      1252
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_2.png",
      "x": 4115.2,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      336,
+      1275
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_3.png",
      "x": 6572.799999999999,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      350,
+      1363
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_4.png",
      "x": 9030.4,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      354,
+      1268
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_5.png",
      "x": 11488.0,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      265,
+      1273
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_6.png",
      "x": 13945.599999999999,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      276,
+      1561
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_orilla_7.png",
      "x": 16403.2,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      261,
+      1632
+     ]
     }
    ]
   },
@@ -181,42 +249,74 @@
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_0.png",
      "x": -800.0,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      1330,
+      2332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_1.png",
      "x": 1657.6,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      1166,
+      2332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_2.png",
      "x": 4115.2,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      1190,
+      2332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_3.png",
      "x": 6572.799999999999,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      1190,
+      2332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_4.png",
      "x": 9030.4,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      1185,
+      2332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_5.png",
      "x": 11488.0,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      1177,
+      2332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_6.png",
      "x": 13945.599999999999,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      1287,
+      2332
+     ]
     },
     {
      "tex": "res://assets/egipto/acto1/capas/medio_arena_7.png",
      "x": 16403.2,
-     "y": -1758.5
+     "y": -1758.5,
+     "filas": [
+      1438,
+      2332
+     ]
     }
    ]
   },

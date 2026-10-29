@@ -38,6 +38,10 @@ var _tex_bocanada: Texture2D
 
 func montar(x: float, suelo: float) -> void:
 	_suelo = suelo
+	# (las texturas del polvo, ya aqui: hechas pixel a pixel al primer uso, el
+	# fotograma del golpe se paraba; 2026-10-29, rendimiento)
+	_estela()
+	_bocanada()
 	for m in monton:
 		var tex: Texture2D = load(DUNAS % m[0])
 		var s := Sprite2D.new()
