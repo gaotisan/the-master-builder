@@ -22,6 +22,10 @@ uniform float corrido = 16.0;       // px de textura que se corre en vertical, a
 uniform float opaco = 0.78;         // lo que tapa el reflejo al agua, junto a la orilla
 uniform float sombra = 1.12;        // el reflejo, algo mas claro (el sol en el agua, como los de la orilla)
 uniform float suave = 1.0;          // px de textura del suavizado del templo
+// (los px de arriba, medidos con el video a 640 de ancho: px de la textura por
+// cada uno; templo.json "px". El suavizado no: con el video entero, la mitad en
+// pantalla, que a 1,4 se veia blando junto a la orilla)
+uniform float px = 1.0;
 // el velo de la calima (templo.json "velo"): las sombras del templo iban mucho
 // mas oscuras y con mas contraste que la orilla pintada; mezclado un poco hacia
 // el color del aire de lejos, sombras y medios caen donde los de la orilla sin
@@ -49,19 +53,20 @@ void fragment() {
 	if (reflejo) {
 		// (con flip_v, UV.y = 1 en la linea del agua)
 		float prof = 1.0 - UV.y;
-		vec2 px = UV / TEXTURE_PIXEL_SIZE;
+		vec2 t = TEXTURE_PIXEL_SIZE * px;
+		vec2 p = UV / t;
 		vec2 uv = UV;
 		// (la misma onda que los reflejos de orilla.gdshader, mas floja, y
 		// corrido tambien unos px de lado: los reflejos pintados de la orilla son
 		// blandos y apenas cambian al ondularse; este, con los bordes de las
 		// palmeras, vibraba. Medido: ahora cambia lo mismo que la orilla)
-		float onda = sin(px.y * 6.2832 / mix(4.0, 9.0, prof) + TIME * 1.3 + sin(px.x * 0.004 + TIME * 0.35) * 2.0);
-		uv.x += onda * mix(0.3, temblor, prof) * TEXTURE_PIXEL_SIZE.x;
-		float h = mix(3.0, corrido, prof) * TEXTURE_PIXEL_SIZE.y;
+		float onda = sin(p.y * 6.2832 / mix(4.0, 9.0, prof) + TIME * 1.3 + sin(p.x * 0.004 + TIME * 0.35) * 2.0);
+		uv.x += onda * mix(0.3, temblor, prof) * t.x;
+		float h = mix(3.0, corrido, prof) * t.y;
 		c = vec4(0.0);
 		for (int i = -4; i <= 4; i++) {
 			float k = float(i) / 4.0;
-			vec2 d = vec2(sin(float(i) * 2.3) * 3.0 * TEXTURE_PIXEL_SIZE.x, k * h);
+			vec2 d = vec2(sin(float(i) * 2.3) * 3.0 * t.x, k * h);
 			c += muestra(TEXTURE, uv + d) * (1.0 - 0.5 * abs(k));
 		}
 		// (los pesos suman 6,5)

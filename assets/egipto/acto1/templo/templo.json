@@ -1,8 +1,9 @@
 {
  "capa": "orilla",
- "x": -116.7,
- "y": -1109.9,
- "escala": 1.248,
+ "x": -276.5,
+ "y": -1253.7,
+ "escala": 0.8736,
+ "px": 2.0,
  "primero": "res://assets/egipto/acto1/templo/primero.png",
  "ultimo": "res://assets/egipto/acto1/templo/ultimo.png",
  "video": "res://assets/egipto/acto1/templo/secuencia.ogv",
@@ -42,15 +43,15 @@
    "res://assets/egipto/acto1/templo/barco/30.png"
   ],
   "fps": 24,
-  "x": 380.0,
-  "y": 161.0,
+  "x": 760.0,
+  "y": 322.0,
   "desde": 23.166666666666668,
-  "velocidad": 58.44,
+  "velocidad": 116.88,
   "espuma": {
-   "popa": 72.5,
-   "proa": 256.0,
-   "remo": 67.5,
-   "linea": 127.0,
+   "popa": 145.0,
+   "proa": 512.0,
+   "remo": 135.0,
+   "linea": 254.0,
    "salpica": [
     20,
     30

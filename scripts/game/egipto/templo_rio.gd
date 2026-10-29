@@ -27,6 +27,9 @@ const ESPUMA := preload("res://scripts/game/egipto/barco_espuma.gdshader")
 var espuma_fuerza := 1.0
 var espuma_entra := 0.8
 const ESTELA := 220.0
+## Px de la textura por cada px de las medidas a mano (hechas con el video a 640
+## de ancho: la espuma, el reflejo; templo.json "px").
+var _px := 1.0
 
 signal acabado
 
@@ -49,6 +52,7 @@ var _espuma_mat: ShaderMaterial
 var barco_dura := 90.0
 
 func montar(d: Dictionary) -> void:
+	_px = float(d.get("px", 1.0))
 	position = Vector2(float(d["x"]), float(d["y"]))
 	var e := float(d["escala"])
 	scale = Vector2(e, e)
@@ -114,13 +118,16 @@ func montar(d: Dictionary) -> void:
 		_espuma_mat.set_shader_parameter("ruido", ruido)
 		var arriba := 6.0
 		var alto := 24.0
-		_espuma_mat.set_shader_parameter("tam", Vector2(ESTELA + float(esp["proa"]) + 12.0, alto))
+		# (la espuma, en px de 640 de ancho: el rectangulo escalado por _px)
+		var largo := ESTELA + float(esp["proa"]) / _px + 12.0
+		_espuma_mat.set_shader_parameter("tam", Vector2(largo, alto))
 		_espuma_mat.set_shader_parameter("linea", arriba)
 		for c in ["popa", "proa", "remo"]:
-			_espuma_mat.set_shader_parameter(c, ESTELA + float(esp[c]))
+			_espuma_mat.set_shader_parameter(c, ESTELA + float(esp[c]) / _px)
 		_espuma = ColorRect.new()
 		_espuma.material = _espuma_mat
-		_espuma.size = Vector2(ESTELA + float(esp["proa"]) + 12.0, alto)
+		_espuma.size = Vector2(largo, alto)
+		_espuma.scale = Vector2(_px, _px)
 		_espuma.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_espuma.visible = false
 		add_child(_espuma)
@@ -175,8 +182,8 @@ func _process(delta: float) -> void:
 	_barco_reflejo.position = Vector2(x, float(_barco_d["y"]) + _barco.texture.get_height())
 	# la espuma, con el barco; el remo salpica en sus fotogramas
 	var esp: Dictionary = _barco_d["espuma"]
-	_espuma.position = Vector2(x - ESTELA, float(_barco_d["y"]) + float(esp["linea"]) - 6.0)
-	_espuma_mat.set_shader_parameter("avance", float(_barco_d["velocidad"]) * _barco_t)
+	_espuma.position = Vector2(x - ESTELA * _px, float(_barco_d["y"]) + float(esp["linea"]) - 6.0 * _px)
+	_espuma_mat.set_shader_parameter("avance", float(_barco_d["velocidad"]) * _barco_t / _px)
 	var sal: Array = esp["salpica"]
 	_espuma_mat.set_shader_parameter("salpica", smoothstep(float(sal[0]) - 2.0, float(sal[0]) + 4.0, float(i)))
 	_espuma_mat.set_shader_parameter("fuerza", espuma_fuerza * clampf(_barco_t / espuma_entra, 0.0, 1.0))
@@ -196,6 +203,7 @@ func _material(d: Dictionary, es_reflejo: bool) -> ShaderMaterial:
 	m.set_shader_parameter("grado", Basis(_columna(g, 0), _columna(g, 1), _columna(g, 2)))
 	m.set_shader_parameter("grado_add", _columna(g, 3))
 	m.set_shader_parameter("reflejo", es_reflejo)
+	m.set_shader_parameter("px", _px)
 	# (templo.json "velo": color 0-255 y cuanto)
 	if d.has("velo"):
 		m.set_shader_parameter("velo_color", _v3(d["velo"]["color"]) / 255.0)

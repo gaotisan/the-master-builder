@@ -42,11 +42,25 @@ FFMPEG = os.path.join(os.path.dirname(os.path.dirname(PROYECTO)), "tools", "ffmp
 
 # ---- el video (px del video, 1280x720)
 CORTE = 634          # la linea del agua del muelle (lo de debajo es su agua: fuera)
-ARRIBA = 58          # por encima de lo mas alto del pilono (y 72); 576 filas -> 288, multiplo de 16 (Theora)
-REDUCE = 0.5         # el video en el juego, a 640 de ancho: a la escala a la que se ve
+ARRIBA = 58          # por encima de lo mas alto del pilono (y 72); 576 filas, multiplo de 16 (Theora)
+# el video en el juego: entero (1280 de ancho). A 0,5 (640) se veia blando junto a
+# la orilla al agrandarlo (el usuario: "resolucion entera y unos 1,4")
+REDUCE = 1.0
+# las medidas hechas a mano a 640 de ancho (los shaders: reflejo, suavizado,
+# espuma) van en px de la textura por este factor (templo.json "px")
+PX = REDUCE / 0.5
+# calidad del Theora (0-10): a 9 el video entero pasaba de 100 MB (el limite de
+# GitHub por archivo)
+CALIDAD = 8
 X_PILONO = 780       # el centro del pilono alto
 # ---- en la orilla de enfrente (px de la tira cosida, medio_orilla_0.png)
-ESCALA = 0.52        # px de la orilla por px del video (las palmeras del video, como las de la orilla)
+PALMERAS = 0.52      # px de la orilla por px del video con las palmeras del video como las de la orilla
+# MAS GRANDE (2026-10-29, el usuario: "se ve muy poquito el detalle de los hombres
+# funebres"): probado en el juego a 1,4 y a 1,7, desde el centro de su base; a 1,7
+# sus palmeras tapan media nave de detras; en el juego, a 1,7 se notaban demasiado
+# los defectos: 1,4.
+AGRANDAR = 1.4
+ESCALA = PALMERAS * AGRANDAR
 X_TORRE = 975        # el centro de la torre del templo viejo: ahi va el pilono
 Y_AGUA = 840         # la linea del agua de la orilla junto a la torre
 # lo que se quita del templo viejo, donde el nuevo no lo tapa: la torre (remate,
@@ -101,7 +115,9 @@ def alfa(bgr):
 def a_orilla(img_video, forma):
     """Lo del video (recortado de ARRIBA a CORTE) llevado a px de la orilla."""
     e = ESCALA
-    x0 = X_TORRE - X_PILONO * e
+    # (el pilono en la torre vieja a su tamano de palmeras, y agrandado desde el
+    # centro del video)
+    x0 = X_TORRE - X_PILONO * PALMERAS - 640 * (e - PALMERAS)
     y0 = Y_AGUA - (CORTE - ARRIBA) * e
     M = np.float32([[e, 0, x0], [0, e, y0]])
     return cv2.warpAffine(img_video, M, (forma[1], forma[0]), flags=cv2.INTER_AREA), (x0, y0)
@@ -267,6 +283,129 @@ def recortar_barco():
     json.dump({"x": cx0, "y": cy0, "fotograma": RELEVO}, open(os.path.join(ORIGEN, "barco.json"), "w"), indent=1)
 
 
+# LA PALA (2026-10-29, el usuario: "recompon la pala en los 30 y dejala bien"):
+# la diferencia con el templo vacio la sacaba mellada (donde la madera se parece a
+# la piedra de detras) y con agua y postes pegados. Se rehace con forma: el eje del
+# remo, buscado en cada fotograma como una cresta (distinto a los dos lados),
+# empezando por el del ultimo; la cana, una banda fina a lo largo; la pala, lo que
+# hay alrededor del eje abajo, cerrado. Los px son los del video (el remo esta
+# ahi: solo fallaba la mascara). A la izquierda de la popa no queda nada mas.
+REMO_Y = (175.0, 225.0)          # el eje: su x a estas dos alturas (px del lienzo)
+REMO_EJE = (202.8, 136.7)        # en el ultimo
+REMO_CANA = 1.9                  # media anchura de la cana
+REMO_PALA = 7                    # media anchura de la banda de la pala
+REMO_LIBRE = 145                 # a la izquierda de la popa (x del lienzo)
+REMO_CANA_DESDE = 185            # la cana se repasa por debajo de las manos
+
+
+def ejes_remo(lienzos):
+    """El eje del remo en cada lienzo, del ultimo hacia atras: (x en REMO_Y[0],
+    x en REMO_Y[1])."""
+    y1, y2 = REMO_Y
+    im = [cv2.GaussianBlur(l[..., :3].astype(np.float32), (0, 0), 0.7) for l in lienzos]
+
+    def toma(m, x, y):
+        return cv2.remap(m, x.astype(np.float32), y.astype(np.float32), cv2.INTER_LINEAR)
+
+    def cresta(m, a, b):
+        ys = np.linspace(178, 215, 60)[None, :]
+        xs = a + (b - a) * (ys - y1) / (y2 - y1)
+        d = np.array([b - a, y2 - y1]) / np.hypot(b - a, y2 - y1)
+        c = toma(m, xs, ys)
+        lados = [toma(m, xs + sg * d[1] * 3.5, ys - sg * d[0] * 3.5) for sg in (1, -1)]
+        return np.minimum(*[np.abs(c - l).sum(-1) for l in lados]).mean()
+    ejes = [None] * len(lienzos)
+    a, b = REMO_EJE
+    pasos = np.arange(-4, 4.01, 0.5)
+    for i in range(len(lienzos) - 1, -1, -1):
+        _, a, b = max((cresta(im[i], a + da, b + db), a + da, b + db) for da in pasos for db in pasos)
+        ejes[i] = (a, b)
+    return ejes
+
+
+def rehacer_remo(lienzo, alfa, eje):
+    """La alfa con el remo rehecho sobre su eje."""
+    alto, ancho = alfa.shape
+    y1, y2 = REMO_Y
+    a, b = eje
+    yy, xx = np.mgrid[0:alto, 0:ancho].astype(np.float32)
+    d = np.array([b - a, y2 - y1]) / np.hypot(b - a, y2 - y1)
+    # distancia al eje
+    dist = np.abs((xx - a) * d[1] - (yy - y1) * d[0])
+    cana = np.clip(REMO_CANA + 0.5 - dist, 0, 1)
+    cana[yy < REMO_CANA_DESDE] = 0
+    # la pala: lo que habia cerca del eje, abajo, cerrado y sin huecos
+    banda = (dist <= REMO_PALA) & (yy >= 205)
+    pala = ((alfa > 128) & banda).astype(np.uint8)
+    pala = cv2.morphologyEx(pala, cv2.MORPH_CLOSE, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7)))
+    lleno = pala.copy()
+    cv2.floodFill(lleno, np.zeros((alto + 2, ancho + 2), np.uint8), (0, 0), 1)
+    pala = (pala | (lleno == 0)) & banda
+    # (solo lo que toca el eje)
+    n, lab = cv2.connectedComponents(pala.astype(np.uint8))
+    toca = set(np.unique(lab[(dist < 1.0) & (pala > 0)])) - {0}
+    pala = np.isin(lab, list(toca)).astype(np.float32)
+    pala = cv2.GaussianBlur(pala, (0, 0), 0.6)
+    remo = np.maximum(cana, pala)
+    nueva = np.maximum(alfa.astype(np.float32), remo * 255)
+    libre = xx < REMO_LIBRE
+    nueva[libre] = remo[libre] * 255
+    return nueva.astype(np.uint8)
+
+
+def seguir_retoque():
+    """Lo que el usuario borro a mano en el ultimo (el del RELEVO), llevado a los
+    demas en barco_retoque/: lo quieto, en el mismo sitio; lo del remero de atras
+    y su remo, siguiendolo hacia atras fotograma a fotograma (flujo optico sobre
+    el lienzo entero de _auto/). Solo quita: lo que el usuario ya borro en cada
+    uno se queda. (--seguir-retoque; despues, pasar main otra vez)"""
+    d = json.load(open(os.path.join(ORIGEN, "barco.json"), encoding="utf-8"))
+    ox, oy = d["x"], d["y"]
+    n = RELEVO - REMO + 1
+    auto = [leer(os.path.join(RETOQUE, "_auto", "%02d.png" % i), cv2.IMREAD_UNCHANGED) for i in range(n)]
+    ultimo = leer(os.path.join(RETOQUE, "%02d.png" % (n - 1)), cv2.IMREAD_UNCHANGED)
+    alto, ancho = ultimo.shape[:2]
+    movil = np.zeros((alto, ancho), np.float32)
+    for x0, x1, y0, y1 in ZONAS_REMO:
+        movil[max(0, y0 - oy):y1 - oy, x0 - ox:x1 - ox] = 1
+    movil = cv2.dilate(movil, np.ones((15, 15), np.uint8))
+    quita = np.clip((auto[-1][..., 3].astype(np.float32) - ultimo[..., 3]) / 255.0, 0, 1)
+    quieto = quita * (1 - movil)
+    sigue = quita * movil
+    ejes = ejes_remo(auto)
+    dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+    gris = [cv2.cvtColor(a[..., :3], cv2.COLOR_BGR2GRAY) for a in auto]
+    yy, xx = np.mgrid[0:alto, 0:ancho].astype(np.float32)
+    alfas = [None] * (n - 1) + [ultimo[..., 3]]
+    for i in range(n - 2, -1, -1):
+        fl = dis.calc(gris[i], gris[i + 1], None)
+        fv = dis.calc(gris[i + 1], gris[i], None)
+        mx, my = xx + fl[..., 0], yy + fl[..., 1]
+        sigue = cv2.remap(sigue, mx, my, cv2.INTER_LINEAR)
+        # solo donde el flujo es de fiar: ida y vuelta al mismo sitio y el mismo
+        # color (el remo, fino y rapido, se llevaba los borrados del fondo)
+        vuelta = cv2.remap(fv, mx, my, cv2.INTER_LINEAR) + fl
+        sig = cv2.remap(auto[i + 1][..., :3].astype(np.float32), mx, my, cv2.INTER_LINEAR)
+        color = np.abs(sig - auto[i][..., :3]).max(2)
+        sigue *= (np.hypot(vuelta[..., 0], vuelta[..., 1]) < 1.0) & (color < 30)
+        # (sin que se emborrone de uno en otro)
+        sigue = np.clip((sigue - 0.5) * 2 + 0.5, 0, 1) * movil
+        u = leer(os.path.join(RETOQUE, "%02d.png" % i), cv2.IMREAD_UNCHANGED)
+        q = np.maximum(quieto, sigue)
+        alfas[i] = np.minimum(u[..., 3], (auto[i][..., 3] * (1 - q)).astype(np.uint8))
+    # SIN PARPADEO (el usuario: "se ven los pixeles que parpadean ... cosas que
+    # estan y no estan"): en el remero, cada px como la mediana de su fotograma y
+    # los de al lado (lo que sale en uno solo, fuera; el borde, quieto)
+    for i in range(n - 1):
+        tres = np.stack([alfas[max(0, i - 1)], alfas[i], alfas[i + 1]])
+        quieta = np.median(tres, 0).astype(np.uint8)
+        u = leer(os.path.join(RETOQUE, "%02d.png" % i), cv2.IMREAD_UNCHANGED)
+        u[..., 3] = np.where(movil > 0, quieta, alfas[i])
+        u[..., 3] = rehacer_remo(auto[i], u[..., 3], ejes[i])
+        guardar(os.path.join(RETOQUE, "%02d.png" % i), u)
+    print("retoque del", n - 1, "llevado a los", n - 1, "de antes")
+
+
 def sin_barco(f, ult, ult_gris, mascara, peso):
     """El fotograma con la banda del barco del templo vacio, encajado (el video
     se mueve unos px: afin medida fuera de la banda)."""
@@ -289,7 +428,7 @@ def video(destino, ult, tramos):
     ancho, alto_r = int(1280 * REDUCE), int(alto * REDUCE)
     ff = subprocess.Popen([FFMPEG, "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24",
                            "-s", "%dx%d" % (ancho, alto_r), "-r", "24", "-i", "-",
-                           "-c:v", "libtheora", "-q:v", "9", "-g:v", "1", destino], stdin=subprocess.PIPE)
+                           "-c:v", "libtheora", "-q:v", str(CALIDAD), "-g:v", "1", destino], stdin=subprocess.PIPE)
     ult_gris = cv2.GaussianBlur(cv2.cvtColor(ult, cv2.COLOR_BGR2GRAY).astype(np.float32), (0, 0), 1.5)
     bx, by = BANDA
     mascara = np.zeros(ult.shape[:2], np.uint8)
@@ -513,6 +652,9 @@ def main():
     if "--recortar-barco" in sys.argv:
         recortar_barco()
         return
+    if "--seguir-retoque" in sys.argv:
+        seguir_retoque()
+        return
     vista = sys.argv[sys.argv.index("--vista") + 1] if "--vista" in sys.argv else None
     os.makedirs(DESTINO, exist_ok=True)
     primero = leer(os.path.join(ORIGEN, "primero.png"))
@@ -548,6 +690,7 @@ def main():
         "y": round(float(t0["y"]) + yi * ec, 1),
         # (unidades del juego por px de la textura)
         "escala": round(ESCALA / REDUCE * ec, 4),
+        "px": PX,
         "primero": RES + "primero.png",
         "ultimo": RES + "ultimo.png",
         "video": RES + "secuencia.ogv",
