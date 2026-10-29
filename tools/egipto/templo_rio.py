@@ -70,6 +70,17 @@ FUERZA = 0.6
 # la orilla. Medido en el juego, 2026-10-29 (una curva por canal lo ponia rosado)
 VELO_COLOR = [172, 194, 186]
 VELO = 0.18
+# y un pelin mas naranja y oscura la piedra al sol (el usuario: "demasiado
+# amarillo"; medido: tono 82-87 grados frente a 73-77 de la orilla), por canal
+# sobre el grado
+CALOR = [0.985, 0.935, 0.94]
+# LOS TRES VIDEOS (procesion, barco que atraca, barco que se va) tienen cada uno
+# su color: la piedra del templo a 72, 76 y 80 grados de tono y cada vez menos
+# saturada; saltaba en los empalmes y el templo del final quedaba amarillo y
+# apagado. Los dos ultimos, con la luz y el color del primero (en Lab, medido en
+# la piedra del templo); el grado se mide en el primero.
+TRAMOS = [(0, 200), (200, 440), (440, 680)]
+PIEDRA = [(700, 860, 90, 300), (430, 560, 250, 330)]   # px del video: pilono y fachada
 
 
 def leer(ruta, flags=cv2.IMREAD_COLOR):
@@ -129,6 +140,7 @@ def grado(video, orilla):
     A = np.linalg.lstsq(X, destino[:, ::-1], rcond=None)[0].T
     A = np.c_[np.eye(3), np.zeros(3)] * (1 - FUERZA) + A * FUERZA
     # (RGB; filas = canal de salida, la ultima columna lo que se suma)
+    A = A * np.array(CALOR)[:, None]
     return np.round(A, 4).tolist()
 
 
@@ -146,6 +158,42 @@ def quitar_viejo(orilla, nuevo_alfa):
     k = np.minimum(np.arange(w), np.arange(w)[::-1]) / float(FUNDIDO)
     k = np.clip(k, 0, 1)[None, :, None]
     orilla[y0:y1, x0:x1] = (fuente * k + destino * (1 - k)).astype(np.uint8)
+
+
+def _lab(bgr):
+    return cv2.cvtColor(bgr.astype(np.float32) / 255.0, cv2.COLOR_BGR2LAB)
+
+
+def medir_tramos():
+    """Por tramo, media y desviacion en Lab de la piedra al sol del templo."""
+    cap = cv2.VideoCapture(os.path.join(ORIGEN, "secuencia.mp4"))
+    muestras = [[] for _ in TRAMOS]
+    k = 0
+    while True:
+        ok, f = cap.read()
+        if not ok:
+            break
+        if k % 10 == 0:
+            i = next(j for j, (a, b) in enumerate(TRAMOS) if a <= k < b)
+            lab = _lab(f)
+            for x0, x1, y0, y1 in PIEDRA:
+                z = lab[y0:y1, x0:x1].reshape(-1, 3)
+                muestras[i].append(z[(z[:, 2] > 8) & (z[:, 0] > 40)])
+        k += 1
+    est = [np.vstack(m) for m in muestras]
+    ref = est[0]
+    # (mul, add) por tramo: el tramo con la media y el contraste del primero
+    return [(ref.std(0) / e.std(0), ref.mean(0) - e.mean(0) * ref.std(0) / e.std(0)) for e in est]
+
+
+def igualar(bgr, k, tramos):
+    """El fotograma k con el color del primer video."""
+    i = next(j for j, (a, b) in enumerate(TRAMOS) if a <= k < b)
+    if i == 0:
+        return bgr
+    mul, add = tramos[i]
+    lab = _lab(bgr) * mul + add
+    return np.clip(cv2.cvtColor(lab, cv2.COLOR_LAB2BGR) * 255.0 + 0.5, 0, 255).astype(np.uint8)
 
 
 def recortar(bgr):
@@ -222,7 +270,7 @@ def sin_barco(f, ult, ult_gris, mascara, peso):
     return (f * (1 - peso) + placa * peso).astype(np.uint8)
 
 
-def video(destino, ult):
+def video(destino, ult, tramos):
     # (todo fotogramas clave: con los intermedios de este libtheora, el Theora de
     # Godot 4.6 sacaba bloques de colores en casi todo el video; 31 MB)
     alto = CORTE - ARRIBA
@@ -245,6 +293,7 @@ def video(destino, ult):
             break
         if k > RELEVO:
             f = sin_barco(f, ult, ult_gris, mascara, peso)
+        f = igualar(f, k, tramos)
         ff.stdin.write(np.ascontiguousarray(recortar(f)).tobytes())
         k += 1
     ff.stdin.close()
@@ -268,7 +317,7 @@ def seguir_barco(f, plantilla, mascara):
     return lx + sx + 600 - x0, ly + sy - 14
 
 
-def barco(carpeta, ult):
+def barco(carpeta, ult, tramos):
     """El barco suelto para el juego: un PNG por fotograma del remo, a la escala
     del video del juego y cortado en la linea del agua, como el templo. Devuelve
     lo que va en templo.json."""
@@ -345,6 +394,7 @@ def barco(carpeta, ult):
         fuera = (np.arange(ancho) + ox + dx) >= f.shape[1] - 1
         rgba[:, fuera] = b[:, fuera]
         rgba = rgba[:CORTE - oy]
+        rgba[..., :3] = igualar(np.clip(rgba[..., :3], 0, 255).astype(np.uint8), k, tramos)
         # (premultiplicado al reducir: sin orla oscura)
         rgba[..., :3] *= rgba[..., 3:] / 255.0
         r = cv2.resize(rgba, None, fx=REDUCE, fy=REDUCE, interpolation=cv2.INTER_AREA)
@@ -443,11 +493,14 @@ def main():
     quitar_viejo(orilla, nuevo_alfa)
     guardar(ruta_orilla, orilla)
 
+    tramos = medir_tramos()
+    for i, (mul, add) in enumerate(tramos):
+        print("tramo", i, "Lab x", np.round(mul, 3), "+", np.round(add, 3))
     guardar(os.path.join(DESTINO, "primero.png"), recortar(primero))
-    guardar(os.path.join(DESTINO, "ultimo.png"), recortar(ultimo))
-    video(os.path.join(DESTINO, "secuencia.ogv"), ultimo)
+    guardar(os.path.join(DESTINO, "ultimo.png"), recortar(igualar(ultimo, TRAMOS[-1][1] - 1, tramos)))
+    video(os.path.join(DESTINO, "secuencia.ogv"), ultimo, tramos)
     cantos(os.path.join(DESTINO, "cantos.ogg"))
-    datos_barco = barco(os.path.join(DESTINO, "barco"), ultimo)
+    datos_barco = barco(os.path.join(DESTINO, "barco"), ultimo, tramos)
     # en el juego: px de la orilla -> coordenadas de su capa
     datos = {
         "capa": "orilla",
