@@ -34,8 +34,9 @@ extends Node2D
 ## EL PEREGRINO (peregrino_camino.gd), de frente y LO LLEVA EL JUGADOR. Entra
 ## desde la bruma del fondo del camino: la primera vez, cuando se va el emu (el
 ## emu sale solo esa vez: Partida "camino_emu"); las demas, enseguida. Al
-## llegar delante, andando, CORTE al contraplano (escena_siguiente, el cruce del
-## bosque: la camara de detras, que le ve de espaldas seguir andando); volviendo
+## llegar delante, andando, CORTE al contraplano (escena_siguiente, el camino
+## derecho: la camara de detras, que le ve de espaldas seguir andando hacia la
+## casa de Dominus; hasta el 2026-10-29 era el cruce del bosque); volviendo
 ## de alli entra por delante, de espaldas y andando. Si se aleja hacia la bruma, CORTE a la escena de antes
 ## (escena_anterior), sin negro, como un cambio de camara (el usuario: "para
 ## darle continuidad al mundo"; se carga desde que tiene el mando), diciendole
@@ -71,7 +72,7 @@ const PartidaHechos := preload("res://scripts/game/partida.gd")
 @export_file("*.tscn") var escena_anterior := "res://scenes/game/caida_hojarasca.tscn"
 ## El contraplano: a la que pasa al llegar delante (corte de camara, andando).
 ## Vacia: a negro y ahi se queda (como antes de haberla).
-@export_file("*.tscn") var escena_siguiente := "res://scenes/game/cruce_bosque.tscn"
+@export_file("*.tscn") var escena_siguiente := "res://scenes/game/camino_derecho.tscn"
 ## Como se llama esta escena para la siguiente (PeregrinoEstado viene_de: por
 ## ahi sabe por donde entra).
 @export var nombre_escena := "camino_bosque"

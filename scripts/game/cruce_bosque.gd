@@ -12,6 +12,10 @@ extends "res://scripts/game/plano_bosque.gd"
 ## que le recibe de espaldas. En la explanada, izquierda o derecha: anda hacia la
 ## boca de ese camino y `boca`: corte al plano de ese camino. Al fondo del
 ## central, `salida` ("casa"): aun no hay escena, a negro.
+##
+## SIN ENLAZAR desde el 2026-10-29: el contraplano del camino es ahora el camino
+## derecho, recto hasta la casa (camino_bosque.gd escena_siguiente). Se queda
+## para abrirla suelta (cruce_bosque.bat).
 
 @export_group("Caminos")
 ## A donde lleva cada camino (vacio: a negro y ahi se queda).

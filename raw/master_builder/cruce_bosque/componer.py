@@ -78,21 +78,26 @@ def niebla_de(l, radio):
 	return cv2.GaussianBlur(cerrado, (0, 0), radio * 0.8)
 
 
-def poner_casa(cruce):
+def poner_casa(cruce, contorno=None, base=None, ancho=None):
+	"""La casa sobre la niebla de `cruce`. Otro plano (camino_derecho/componer.py)
+	pasa su contorno, su base y su ancho."""
+	contorno = contorno or CONTORNO
+	base = base or BASE
+	ancho = ancho or ANCHO
 	casa = cv2.cvtColor(cv2.imread(os.path.join(AQUI, "casa_midjourney.png")), cv2.COLOR_BGR2RGB).astype(np.float32) / 255.0
 	assert casa.shape[:2] == (H, W), casa.shape
 	lc = cv2.GaussianBlur(lum(casa), (0, 0), 0.8)
 	# Lo que la casa oscurece o aclara la niebla (1 = nada).
 	razon = lc / np.maximum(niebla_de(lc, 40), 0.03)
 	mascara = np.zeros((H, W), np.float32)
-	cv2.fillPoly(mascara, [np.array(CONTORNO, np.int32)], 1.0)
+	cv2.fillPoly(mascara, [np.array(contorno, np.int32)], 1.0)
 	mascara = cv2.GaussianBlur(mascara, (0, 0), 10.0)
-	# Al cruce: escala y traslado (el pie de la verja a BASE).
-	xs = [p[0] for p in CONTORNO]
-	ys = [p[1] for p in CONTORNO]
-	s = ANCHO / (max(xs) - min(xs))
+	# Al cruce: escala y traslado (el pie de la verja a base).
+	xs = [p[0] for p in contorno]
+	ys = [p[1] for p in contorno]
+	s = ancho / (max(xs) - min(xs))
 	cx = 0.5 * (max(xs) + min(xs))
-	m = np.float32([[s, 0, BASE[0] - cx * s], [0, s, BASE[1] - max(ys) * s]])
+	m = np.float32([[s, 0, base[0] - cx * s], [0, s, base[1] - max(ys) * s]])
 	razon_c = cv2.warpAffine(razon, m, (W, H), flags=cv2.INTER_AREA, borderValue=1.0)
 	mascara_c = cv2.warpAffine(mascara, m, (W, H), flags=cv2.INTER_LINEAR, borderValue=0.0)
 	# Perspectiva aerea: menos contraste; lo claro, solo un poco.
@@ -105,7 +110,7 @@ def poner_casa(cruce):
 	donde = mascara_c * suave(0.35, 0.5, lx) * (1.0 - delante)
 	# El pie se pierde en la bruma del suelo (no hay suelo debajo que lo sujete).
 	y = np.mgrid[0:H, 0:W][0].astype(np.float32)
-	donde *= 1.0 - 0.6 * suave(BASE[1] - 50.0, BASE[1] + 6.0, y)
+	donde *= 1.0 - 0.6 * suave(base[1] - 50.0, base[1] + 6.0, y)
 	f = 1.0 + (efecto - 1.0) * donde
 	return cruce * f[..., None]
 

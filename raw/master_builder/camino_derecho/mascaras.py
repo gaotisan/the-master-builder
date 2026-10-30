@@ -2,9 +2,10 @@
 de la camara, como el camino del bosque). Fuente: fondo_suavizado.png (la de
 Midjourney, fondo_midjourney.png, traia un relieve de grabado en todo: quitado
 con un suavizado que respeta bordes, a la mitad y vuelta a subir; comparado con
-el cruce a tamano de pantalla, casa). El color, al del camino del bosque.
+el cruce a tamano de pantalla, casa) con la casa de Dominus al fondo:
+fondo_compuesto.png (componer.py). El color, al del camino del bosque.
 
-  python mascaras.py   -> assets/world/camino_derecho/
+  python componer.py && python mascaras.py   -> assets/world/camino_derecho/
 """
 import importlib.util
 import os
@@ -29,4 +30,4 @@ CFG = {
 
 if __name__ == "__main__":
 	proyecto = os.path.normpath(os.path.join(AQUI, "..", "..", ".."))
-	fv.generar(os.path.join(AQUI, "fondo_suavizado.png"), os.path.join(proyecto, "assets", "world", "camino_derecho"), CFG)
+	fv.generar(os.path.join(AQUI, "fondo_compuesto.png"), os.path.join(proyecto, "assets", "world", "camino_derecho"), CFG)

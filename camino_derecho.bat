@@ -1,6 +1,6 @@
 @echo off
-REM Abre el camino derecho del cruce, frontal, aparte del juego
-REM (scenes/game/camino_derecho.tscn). Sin escena de antes, el peregrino esta quieto con el
+REM Abre el camino derecho, frontal, aparte del juego (scenes/game/camino_derecho.tscn):
+REM el contraplano del camino del bosque, recto y de espaldas hasta la verja de la casa. Sin escena de antes, el peregrino esta quieto con el
 REM baston en la mano; para probarlo guardado: camino_derecho.bat espalda
 setlocal
 set PROJECT_DIR=%~dp0

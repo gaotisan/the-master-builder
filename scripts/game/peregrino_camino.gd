@@ -25,7 +25,8 @@ extends Node2D
 ## soltarla, lo normal. Si no, tras el corte se daba la vuelta y se volvia. La
 ## hojarasca hace lo mismo al reves: el corte queda continuo en los dos sentidos.
 ##
-## VOLVIENDO DEL CRUCE (viene_de "cruce_bosque"): entra por delante (pies_vuelta),
+## VOLVIENDO DEL CONTRAPLANO (viene_de "camino_derecho", o "cruce_bosque" si se
+## abre el cruce suelto): entra por delante (pies_vuelta),
 ## de espaldas y ya andando, con el mando; si llega con abajo pulsada (alli es
 ## volver hacia aquella camara), mientras siga pulsada se aleja.
 ##
@@ -218,9 +219,10 @@ func _ready() -> void:
 
 
 ## Si llega por delante (de la escena que tiene delante, de espaldas y andando):
-## aqui, del cruce del bosque. Las que lo heredan dicen lo suyo.
+## aqui, del contraplano (el camino derecho; el cruce, si se abre suelto). Las que
+## lo heredan dicen lo suyo.
 func _viene_de_delante(viene_de: String) -> bool:
-	return viene_de == "cruce_bosque"
+	return viene_de in ["camino_derecho", "cruce_bosque"]
 
 
 ## Para las escenas que lo heredan (peregrino_cruce.gd): lo que cambien del
