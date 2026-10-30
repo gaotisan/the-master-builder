@@ -556,11 +556,9 @@ LINEA_ORILLA = None     # (y por columna)
 NAVES = [((1430, 420), -1.0, "posada", 12.0, 60.0), ((1565, 414), 1.0, "posada", 45.0, 60.0),
          ((1765, 413), 1.0, "fuera", 6.0, 60.0),
          # (y en los edificios iguales del principio, mas lejos: mas pequenas)
-         ((330, 528), 1.0, "posada", 70.0, 44.0),
-         # (la pequena que llega: en la azotea a la izquierda de la piramide
-         # pequena; antes en la de la derecha, con una palmera de la orilla por
-         # delante: "aterriza encima de una palmera", 2026-10-28)
-         ((600, 614), -1.0, "fuera", 30.0, 38.0)]
+         ((330, 528), 1.0, "posada", 70.0, 44.0)]
+# (2026-10-30: quitada la pequena que llegaba a la azotea junto a la piramide
+# pequena, detras del templo del cortejo: "ya no pinta nada")
 
 
 def igualar_luz(bgra, dL=0.0, da=0.0, db=0.0, contraste=1.0, croma=1.0):
@@ -872,8 +870,10 @@ def main():
     # de enfrente, por el agua de entre ella y nuestra playa
     e = ESCALA
     # (2026-10-27: eran demasiados y uno pasaba pegado a la playa; pocos, lejos,
-    # pequenos y lentos)
-    datos["barcos"] = {"tras": "orilla", "cuantos": 3, "prof": [0.0, 0.4], "alto": [55.0, 120.0],
+    # pequenos y lentos; 2026-10-30: junto al barco del cortejo del templo
+    # "parecen de papel": mas grandes, cada uno en su carril, sin cruzarse)
+    datos["barcos"] = {"tras": "orilla", "cuantos": 3, "prof": [0.0, 0.4], "alto": [220.0, 440.0],
+                       "carriles": [0.04, 0.2, 0.36],
                        "rapidez": [4.0, 9.0], "p": 0.68, "py": 0.42, "y0": (930 - T.Y_PISA) * e, "y1": (1330 - T.Y_PISA) * e,
                        "x0": X0, "x1": 17000.0}
     # las naves (2026-10-27, un guino del usuario): en las azoteas planas de los

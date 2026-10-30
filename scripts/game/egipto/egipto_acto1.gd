@@ -135,8 +135,21 @@ var _sombra: Sprite2D
 var _polvo: CPUParticles2D
 var _x_fin := 0.0
 var _fondo_capas: Array = []     # [CanvasLayer, paralaje x, paralaje y]
-var _barcos: Array = []          # [Sprite2D, reflejo, x0, x1, velocidad, y, fase]
+var _barcos: Array = []          # [Sprite2D, reflejo, x0, x1, velocidad, y, fase, x, opaco]
 var _naves: Array = []
+var _lluvia: LluviaNaves
+## Al lanzarse el video del templo, unas naves bajan del cielo y se pierden a los
+## dos lados de la piramide grande del fondo (x de su punta en la capa de la
+## ciudad; LluviaNaves.bajada): siempre las mismas, en el mismo sitio.
+const PIRAMIDE_X := 2502.0
+const NAVES_TEMPLO := [-430.0, -240.0, 250.0, 440.0]   # donde se pierde cada una (desde la punta)
+const NAVES_TEMPLO_TRAS := [0.4, 2.1, 1.0, 2.9]          # s tras lanzar el video
+## Y una en la otra esquina, hacia el otro lado, junto al templo (2026-10-30, el
+## usuario: "la gente mira el templo y no se ven cayendo las demas"): donde se
+## pierde (x de la capa de la ciudad, entre el pilono de la izquierda y el
+## templo) y cuando.
+const NAVE_TEMPLO_OTRA := -190.0
+const NAVE_TEMPLO_OTRA_TRAS := 1.6
 var _con_capas := false
 var _datos_capas: Dictionary = {}
 var _tira_capas: Array = []      # [CanvasLayer, paralaje x, paralaje y]
@@ -603,6 +616,9 @@ func _ver_templo() -> void:
 	await get_tree().create_timer(1.5).timeout
 	_templo.cantos_db = templo_cantos_db
 	_templo.lanzar()
+	if _lluvia:
+		_lluvia.bajada(NAVES_TEMPLO.map(func(dx: float) -> float: return PIRAMIDE_X + dx), NAVES_TEMPLO_TRAS)
+		_lluvia.bajada([NAVE_TEMPLO_OTRA], [NAVE_TEMPLO_OTRA_TRAS], Vector2(0.35, 1.0))
 	await _templo.acabado
 	_musica_tema()
 	await get_tree().create_timer(1.0).timeout
@@ -1432,7 +1448,26 @@ const BARCOS_TEX := ["res://assets/egipto/acto1/barcos/barco_0.png",
 		"res://assets/egipto/acto1/barcos/barco_2.png",
 		"res://assets/egipto/acto1/barcos/barco_3.png"]
 @export var barcos_cuantos := 7
-## (con 'conf', de capas.json: cuantos, alto [min, max] y rapidez [min, max])
+## METIDOS EN EL AGUA (2026-10-30, el usuario: "parecen que flotan sobre el agua
+## ... que hagan surcos en el agua de una forma parecida a la barca funeraria,
+## aunque al moverse menos tendran que ser acordes"): de cada textura, la fila de
+## la linea del agua (40% del casco hundido; bajo el casco traen ~12 px vacios,
+## que lo dejaban en el aire) y donde empieza y acaba el casco en ella (popa,
+## proa; la proa a la derecha, hacia donde van sin voltear).
+const BARCOS_CASCO := [[641, 143, 652], [378, 48, 287], [355, 36, 241], [174, 36, 160]]
+## Su espuma: la del barco del cortejo (barco_espuma.gdshader), en sus mismas
+## unidades (1,75 px de la capa: el px del video a 640), mas floja y con la
+## estela corta, que van mucho mas despacio.
+const BARCOS_ESPUMA_U := 1.75
+const BARCOS_ESTELA := 70.0
+@export var barcos_espuma := 1.0
+## El reflejo, mas fuerte que el de los del fondo: el agua refleja la orilla casi
+## entera, y uno flojo los dejaba en el aire.
+@export var barcos_reflejo := 0.5
+const ESPUMA := preload("res://scripts/game/egipto/barco_espuma.gdshader")
+## (con 'conf', de capas.json: cuantos, alto [min, max], rapidez [min, max] y
+## carriles: la profundidad de cada uno, fija; 2026-10-30, el usuario: "que no
+## vayan nunca en la misma linea para que no se choquen")
 func _barcos_tira(capa: CanvasLayer, x0: float, x1: float, y0: float, y1: float, prof0 := 0.12, prof1 := 0.6, conf := {}) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 41
@@ -1448,28 +1483,78 @@ func _barcos_tira(capa: CanvasLayer, x0: float, x1: float, y0: float, y1: float,
 		var tex: Texture2D = texs[i % texs.size()]
 		# (repartidos en profundidad, no al azar: que no coincidan dos a la misma altura)
 		var prof := lerpf(prof0, prof1, (float(i) + rng.randf_range(0.2, 0.8)) / float(int(conf.get("cuantos", barcos_cuantos))))
+		if conf.has("carriles"):
+			prof = float(conf["carriles"][i % conf["carriles"].size()])
 		var y := lerpf(y0, y1, prof)
 		var alto_obj := lerpf(float(alto[0]), float(alto[1]), prof)    # alto del barco en el juego
 		var esc := alto_obj / tex.get_height()
+		var casco: Array = BARCOS_CASCO[i % texs.size()]
+		var agua := float(casco[0])
+		# (la fila del agua en y: lo de debajo se recorta cada fotograma, con el
+		# cabeceo, en _mover_barcos)
 		var s := Sprite2D.new()
 		s.texture = tex
 		s.centered = false
-		s.offset = Vector2(-tex.get_width() * 0.5, -tex.get_height())
+		s.offset = Vector2(-tex.get_width() * 0.5, -agua)
 		s.scale = Vector2(esc, esc)
-		s.modulate = Color(1.0, 0.95, 0.86, 0.95)
+		s.region_enabled = true
+		s.region_rect = Rect2(0.0, 0.0, tex.get_width(), agua)
+		# (opacos y algo en sombra, con la luz de la orilla: tan blancos y
+		# transparentes "parecian de papel", junto al barco del cortejo)
+		s.modulate = Color(0.94, 0.87, 0.77)
+		# el reflejo, desde la linea del agua
 		var r := Sprite2D.new()
 		r.texture = tex
 		r.centered = false
 		r.offset = Vector2(-tex.get_width() * 0.5, 0.0)
 		r.flip_v = true
 		r.scale = Vector2(esc, esc * 0.7)
-		r.modulate = Color(0.85, 0.9, 1.0, 0.25)
+		r.region_enabled = true
+		r.region_rect = s.region_rect
+		r.modulate = Color(0.72, 0.76, 0.84, barcos_reflejo)
 		capa.add_child(r)
 		capa.add_child(s)
 		var v := lerpf(float(rapidez[0]), float(rapidez[1]), prof) * (1.0 if rng.randf() < 0.5 else -1.0)
 		s.flip_h = v < 0.0
 		r.flip_h = s.flip_h
-		_barcos.append([s, r, x0 + 400.0, x1 - 400.0, v, y, rng.randf() * TAU, rng.randf_range(x0 + 400.0, x1 - 400.0)])
+		# la espuma: en un ancla en la linea del agua, volteada con el barco
+		var u := BARCOS_ESPUMA_U
+		var popa := (float(casco[1]) - tex.get_width() * 0.5) * esc / u
+		var proa := (float(casco[2]) - tex.get_width() * 0.5) * esc / u
+		var largo := BARCOS_ESTELA + proa - popa + 12.0
+		var mat := ShaderMaterial.new()
+		mat.shader = ESPUMA
+		mat.set_shader_parameter("ruido", _ruido_espuma())
+		mat.set_shader_parameter("tam", Vector2(largo, 24.0))
+		mat.set_shader_parameter("linea", 6.0)
+		mat.set_shader_parameter("popa", BARCOS_ESTELA)
+		mat.set_shader_parameter("proa", BARCOS_ESTELA + proa - popa)
+		mat.set_shader_parameter("remo", -100.0)
+		mat.set_shader_parameter("salpica", 0.0)
+		mat.set_shader_parameter("estela_largo", BARCOS_ESTELA * 0.6)
+		mat.set_shader_parameter("ola", 0.55)
+		var ancla := Node2D.new()
+		ancla.scale = Vector2(u * signf(v), u)
+		var esp := ColorRect.new()
+		esp.material = mat
+		esp.size = Vector2(largo, 24.0)
+		esp.position = Vector2(popa - BARCOS_ESTELA, -6.0)
+		esp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		ancla.add_child(esp)
+		capa.add_child(ancla)
+		_barcos.append([s, r, x0 + 400.0, x1 - 400.0, v, y, rng.randf() * TAU, rng.randf_range(x0 + 400.0, x1 - 400.0), 1.0,
+				{"agua": agua, "esc": esc, "ancla": ancla, "mat": mat}])
+
+var _ruido_esp: NoiseTexture2D
+func _ruido_espuma() -> NoiseTexture2D:
+	if _ruido_esp == null:
+		_ruido_esp = NoiseTexture2D.new()
+		_ruido_esp.seamless = true
+		_ruido_esp.width = 256
+		_ruido_esp.height = 256
+		_ruido_esp.noise = FastNoiseLite.new()
+		_ruido_esp.noise.frequency = 0.03
+	return _ruido_esp
 
 ## Donde empieza (x) la tira de cada capa del fondo, en sus coordenadas.
 const FONDO_X0 := -1600.0
@@ -1538,7 +1623,7 @@ func _poner_barcos(capa: CanvasLayer, datos: Dictionary, y_arriba: float) -> voi
 			var v := rng.randf_range(9.0, 22.0) * (1.0 if rng.randf() < 0.5 else -1.0)
 			s.flip_h = v < 0.0
 			r.flip_h = s.flip_h
-			_barcos.append([s, r, x0, x1, v, y, rng.randf() * TAU, rng.randf_range(x0, x1)])
+			_barcos.append([s, r, x0, x1, v, y, rng.randf() * TAU, rng.randf_range(x0, x1), 0.92])
 		n += 1
 
 func _mover_barcos(delta: float) -> void:
@@ -1558,8 +1643,24 @@ func _mover_barcos(delta: float) -> void:
 		# que aparezcan y se vayan fundiendo en los extremos de su tramo
 		var borde := minf(float(b[7]) - float(b[2]), float(b[3]) - float(b[7]))
 		var a := clampf(borde / 300.0, 0.0, 1.0)
-		s.modulate.a = 0.92 * a
+		s.modulate.a = float(b[8]) * a
 		r.modulate.a = 0.22 * a
+		if b.size() > 9:
+			# (metido en el agua: sube y baja, y se recorta en la linea del agua,
+			# que no se mueve; el reflejo, pegado a ella)
+			var m: Dictionary = b[9]
+			var esc: float = m["esc"]
+			var alto: float = float(m["agua"]) - bote / esc
+			s.region_rect.size.y = alto
+			r.region_rect.size.y = alto
+			s.rotation *= 0.5
+			r.position.y = float(b[5])
+			r.modulate.a = barcos_reflejo * a
+			var ancla: Node2D = m["ancla"]
+			ancla.position = Vector2(b[7], float(b[5]))
+			ancla.modulate.a = a
+			(m["mat"] as ShaderMaterial).set_shader_parameter("avance", float(b[7]) * signf(float(b[4])) / BARCOS_ESPUMA_U)
+			(m["mat"] as ShaderMaterial).set_shader_parameter("fuerza", barcos_espuma)
 
 ## La lluvia de naves (LluviaNaves, el homenaje a Planet of Lana): en la capa de
 ## la ciudad, por delante de su cielo, cayendo a la vista y perdiendose tras la
@@ -1574,6 +1675,7 @@ func _poner_lluvia(capa: CanvasLayer) -> void:
 	lluvia.donde = func() -> Rect2:
 		return capa.transform.affine_inverse() * Rect2(Vector2.ZERO, get_viewport().get_visible_rect().size)
 	capa.add_child(lluvia)
+	_lluvia = lluvia
 
 ## ---- las naves -----------------------------------------------------------------
 ## Un guino (2026-10-27): naves pequenitas, como las de Planet of Lana, en las

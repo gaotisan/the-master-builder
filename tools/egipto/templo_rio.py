@@ -259,6 +259,64 @@ RETOQUE = os.path.join(ORIGEN, "barco_retoque")
 PROA_DESDE = 1262    # x del video desde donde manda la proa del PROA
 
 
+# LO QUE SE MUEVE UN POCO (2026-10-29, el usuario: "las banderas rojas ... simular
+# de vez en cuando movimiento", la vela del barco "esta quieta" y el barquero que
+# no rema "demasiado quieto": "algo sutil que de el pego sin rehacer animaciones,
+# como las palmeras"): mascaras que dicen cuanto se mueve cada px; lo mueve
+# templo_rio.gdshader (R: la bandera, de lado y mas abajo que arriba; G: tela que
+# se hincha, el toldo y la vela, mas en el centro que en los bordes; B: el
+# barquero, mas la cabeza que los pies). En px de la textura con el video entero.
+BANDERA = [(459, 252), (499, 252), (500, 372), (459, 376)]
+TOLDO = [(466, 414), (500, 388), (506, 383), (560, 397), (625, 400), (628, 414), (600, 418), (520, 417)]
+VELA = [(268, 36), (282, 45), (300, 58), (380, 120), (440, 170), (472, 207), (400, 205), (330, 195),
+        (282, 196), (280, 60)]
+BARQUERO = [(377, 126), (398, 126), (408, 150), (406, 175), (398, 200), (398, 232), (370, 232), (368, 200),
+            (366, 160), (372, 145)]
+
+
+def mascara_mueve(alto, ancho, partes):
+    """partes: (canal, poligono, peso(yy, xx, dentro) -> 0..1)."""
+    m = np.zeros((alto, ancho, 3), np.float32)
+    yy, xx = np.mgrid[0:alto, 0:ancho].astype(np.float32)
+    for canal, pol, peso in partes:
+        dentro = np.zeros((alto, ancho), np.uint8)
+        cv2.fillPoly(dentro, [np.int32(pol)], 1)
+        w = peso(yy, xx, dentro) * dentro
+        m[..., canal] = np.maximum(m[..., canal], cv2.GaussianBlur(w, (0, 0), 1.5))
+    return np.clip(m * 255, 0, 255).astype(np.uint8)
+
+
+def mascaras_mueve(destino):
+    """mueve.png (el templo quieto) y barco_mueve.png (el barco suelto). (BGR)"""
+    def baja(y0, y1):
+        return lambda yy, xx, d: np.clip((yy - y0) / (y1 - y0), 0, 1)
+
+    def centro(d, quita=None):
+        d = d.copy()
+        if quita is not None:
+            d[quita > 0] = 0
+        t = cv2.distanceTransform(d, cv2.DIST_L2, 5)
+        return np.clip(t / max(t.max(), 1e-6) * 1.6, 0, 1)
+    alto, ancho = int((CORTE - ARRIBA) * REDUCE), int(1280 * REDUCE)
+    k = REDUCE / 1.0
+    esc = lambda pol: [(x * k, y * k) for x, y in pol]
+    t = mascara_mueve(alto, ancho, [
+        (2, esc(BANDERA), baja(252 * k, 376 * k)),
+        (1, esc(TOLDO), lambda yy, xx, d: 0.6 * np.clip((yy - 395 * k) / (20 * k), 0, 1)),
+    ])
+    guardar(os.path.join(destino, "mueve.png"), t)
+    b = leer(os.path.join(ORIGEN, "barco.png"), cv2.IMREAD_UNCHANGED)
+    ab, anb = int((CORTE - json.load(open(os.path.join(ORIGEN, "barco.json")))["y"]) * REDUCE), int(b.shape[1] * REDUCE)
+    persona = np.zeros((ab, anb), np.uint8)
+    cv2.fillPoly(persona, [np.int32(esc(BARQUERO))], 1)
+    persona = cv2.dilate(persona, np.ones((7, 7), np.uint8))
+    m = mascara_mueve(ab, anb, [
+        (1, esc(VELA), lambda yy, xx, d: centro(d, persona)),
+        (0, esc(BARQUERO), baja(232 * k, 126 * k)),
+    ])
+    guardar(os.path.join(destino, "barco_mueve.png"), m)
+
+
 def recortar_barco():
     """El barco del RELEVO sin fondo (BiRefNet), con la punta de la proa del
     PROA corrida lo que ha avanzado. A raw (barco.png + barco.json)."""
@@ -696,6 +754,9 @@ def main():
     if "--seguir-retoque" in sys.argv:
         seguir_retoque()
         return
+    if "--mueve" in sys.argv:
+        mascaras_mueve(DESTINO)
+        return
     vista = sys.argv[sys.argv.index("--vista") + 1] if "--vista" in sys.argv else None
     os.makedirs(DESTINO, exist_ok=True)
     primero = leer(os.path.join(ORIGEN, "primero.png"))
@@ -724,6 +785,7 @@ def main():
     video(os.path.join(DESTINO, "secuencia.ogv"), ultimo, tramos)
     cantos(os.path.join(DESTINO, "cantos.ogg"))
     datos_barco = barco(os.path.join(DESTINO, "barco"), ultimo, tramos)
+    mascaras_mueve(DESTINO)
     # en el juego: px de la orilla -> coordenadas de su capa
     datos = {
         "capa": "orilla",
@@ -737,6 +799,8 @@ def main():
         "video": RES + "secuencia.ogv",
         "cantos": RES + "cantos.ogg",
         "barco": datos_barco,
+        "mueve": RES + "mueve.png",
+        "barco_mueve": RES + "barco_mueve.png",
         "grado": g,
         "velo": {"color": VELO_COLOR, "cuanto": VELO},
     }

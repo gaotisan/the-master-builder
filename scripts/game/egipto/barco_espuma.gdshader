@@ -19,6 +19,10 @@ uniform float avance = 0.0;
 uniform float salpica = 0.0;
 uniform float fuerza = 1.0;
 uniform vec3 color = vec3(0.9, 0.92, 0.9);
+// (los faluchos del rio, 2026-10-30: mucho mas lentos, la estela mas corta y la
+// ola de la proa mas baja)
+uniform float estela_largo = 120.0;
+uniform float ola = 1.0;
 
 varying vec4 tinte;
 
@@ -44,12 +48,12 @@ void fragment() {
 	// la ola de la proa
 	vec2 q = vec2((p.x - proa + 4.0) / 14.0, (d + 1.0) / 3.5);
 	float sube = 0.75 + 0.25 * sin(TIME * 6.0 + 6.0 * r(vec2(TIME * 0.2, 0.5)));
-	a += exp(-dot(q, q)) * sube * smoothstep(0.2, 0.55, r(vec2(p.x * 0.03 - TIME * 0.35, p.y * 0.06)));
+	a += ola * exp(-dot(q, q)) * sube * smoothstep(0.2, 0.55, r(vec2(p.x * 0.03 - TIME * 0.35, p.y * 0.06)));
 	// la estela
 	float tras = popa - p.x;
 	float abre = 1.5 + tras * 0.03;
 	float banda = exp(-pow((d - abre) / (1.4 + tras * 0.02), 2.0));
-	a += step(0.0, tras) * exp(-tras / 120.0) * banda
+	a += step(0.0, tras) * exp(-tras / estela_largo) * banda
 		* smoothstep(0.4, 0.75, r(vec2(xa * 0.005, d * 0.04 + 0.3))) * 0.7;
 	// el remo
 	vec2 s = vec2((p.x - remo) / 7.0, (d + 0.5) / 3.5);

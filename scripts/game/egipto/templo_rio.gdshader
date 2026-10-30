@@ -26,6 +26,14 @@ uniform float suave = 1.0;          // px de textura del suavizado del templo
 // cada uno; templo.json "px". El suavizado no: con el video entero, la mitad en
 // pantalla, que a 1,4 se veia blando junto a la orilla)
 uniform float px = 1.0;
+// LO QUE SE MUEVE UN POCO (2026-10-29, el usuario: las banderas "de vez en cuando",
+// la vela, el barquero "demasiado quieto"; "algo sutil que de el pego sin rehacer
+// animaciones"): mascara del tamano de la textura (templo_rio.py mascaras_mueve).
+// R: tela colgada que ondea de lado (la bandera), a rachas; G: tela que se hincha
+// (el toldo, la vela), con su sombra; B: alguien de pie que se mece y respira (el
+// barquero). Px de 640 de ancho, como lo de arriba.
+uniform sampler2D mueve : filter_linear, hint_default_black;
+uniform bool con_mueve = false;
 // el velo de la calima (templo.json "velo"): las sombras del templo iban mucho
 // mas oscuras y con mas contraste que la orilla pintada; mezclado un poco hacia
 // el color del aire de lejos, sombras y medios caen donde los de la orilla sin
@@ -74,13 +82,30 @@ void fragment() {
 		c.rgb = c.a > 0.001 ? c.rgb / c.a : vec3(0.0);
 		c.a *= opaco * (1.0 - smoothstep(largo * 0.2, largo, prof));
 	} else {
+		vec2 uv = UV;
+		float luz = 1.0;
+		if (con_mueve) {
+			vec4 m = texture(mueve, UV);
+			vec2 p = UV / (TEXTURE_PIXEL_SIZE * px);
+			float t = TIME;
+			// (las rachas: casi quieto y de vez en cuando un rato de viento)
+			float racha = 0.25 + 0.75 * smoothstep(0.45, 0.9, 0.5 + 0.5 * sin(t * 0.29) * sin(t * 0.17 + 1.3));
+			vec2 d = vec2(0.0);
+			d.x += m.r * racha * 1.3 * sin(t * 2.4 - p.y * 0.12);
+			float hincha = sin(t * 1.05 + p.y * 0.035 + p.x * 0.015);
+			d += m.g * (0.5 + 0.5 * racha) * vec2(0.7 * hincha, 0.45 * sin(t * 0.85 + p.x * 0.03));
+			luz += m.g * 0.035 * sin(t * 1.05 + p.y * 0.035 + p.x * 0.015 + 0.9);
+			d.x += m.b * (0.5 * sin(t * 0.7) + 0.2 * m.b * sin(t * 1.9 + 0.7));
+			d.y += m.b * 0.25 * (0.5 + 0.5 * sin(t * 1.3));
+			uv -= d * px * TEXTURE_PIXEL_SIZE;
+		}
 		// (un poco suavizado: el video trae el doble de detalle que la pintura
 		// de la orilla y resaltaba)
 		vec2 s = suave * TEXTURE_PIXEL_SIZE;
-		c = muestra(TEXTURE, UV) * 0.4
-			+ (muestra(TEXTURE, UV + s) + muestra(TEXTURE, UV - s)
-			+ muestra(TEXTURE, UV + vec2(s.x, -s.y)) + muestra(TEXTURE, UV + vec2(-s.x, s.y))) * 0.15;
-		c.rgb = c.a > 0.001 ? c.rgb / c.a : vec3(0.0);
+		c = muestra(TEXTURE, uv) * 0.4
+			+ (muestra(TEXTURE, uv + s) + muestra(TEXTURE, uv - s)
+			+ muestra(TEXTURE, uv + vec2(s.x, -s.y)) + muestra(TEXTURE, uv + vec2(-s.x, s.y))) * 0.15;
+		c.rgb = c.a > 0.001 ? c.rgb / c.a * luz : vec3(0.0);
 	}
 	vec3 rgb = mix(grado * c.rgb + grado_add, velo_color, velo);
 	if (reflejo) {

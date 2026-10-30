@@ -222,6 +222,24 @@ func _lanzar() -> bool:
 		_nueva(Vector2(x, y), v, float(i) * _rng.randf_range(0.5, 1.1))
 	return true
 
+## Una bajada fija, siempre igual (2026-10-29, el usuario: al empezar el video del
+## templo, "que lleguen del cielo unas cuantas naves a ambos lados de la piramide
+## del fondo ... siempre por el mismo sitio"): una capsula por cada x de 'metas'
+## (de la capa), que se pierde ahi tras la silueta, cada una 'retrasos' s despues.
+func bajada(metas: Array, retrasos: Array, dir := Vector2(-0.35, 1.0), vel := 120.0) -> void:
+	if not donde.is_valid():
+		return
+	var r: Rect2 = donde.call()
+	var v := dir.normalized() * vel
+	for i in metas.size():
+		var meta := float(metas[i])
+		# (desde encima de lo que se ve, unas mas altas que otras)
+		var y := r.position.y - 90.0 - 45.0 * (i % 2)
+		var x := meta + 600.0
+		for k in 2:
+			x += meta - _impacto(Vector2(x, y), v).x
+		_nueva(Vector2(x, y), v * (1.0 + 0.06 * (i % 3)), float(retrasos[i]))
+
 ## Si en x la silueta es un edificio que sobresale (mas alto que las montanas de
 ## alrededor), no una montana.
 func _es_edificio(x: float) -> bool:
@@ -291,6 +309,8 @@ func _nueva(desde: Vector2, vel: Vector2, retraso: float) -> void:
 	capsula.texture = _tex_capsula
 	capsula.scale = Vector2.ONE * (tam / 130.0)   # (la nave mide ~130 px en su SubViewport)
 	capsula.position = desde
+	# (la nave esta hecha cayendo a la izquierda; a la derecha, en espejo)
+	capsula.flip_h = vel.x > 0.0
 	capsula.visible = false
 	capsula.material = _mat_capsula
 	add_child(capsula)

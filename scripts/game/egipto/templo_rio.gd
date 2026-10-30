@@ -62,7 +62,8 @@ func montar(d: Dictionary) -> void:
 	_quieto = Sprite2D.new()
 	_quieto.texture = load(d["primero"])
 	_quieto.centered = false
-	_quieto.material = m
+	# (lo que se mueve un poco, solo en el quieto: el video ya trae lo suyo)
+	_quieto.material = _material(d, false, d.get("mueve", ""))
 	# (sin mipmaps, como el video: con ellos el ultimo fotograma salia borroso)
 	_quieto.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	add_child(_quieto)
@@ -95,7 +96,7 @@ func montar(d: Dictionary) -> void:
 		_barco = Sprite2D.new()
 		_barco.texture = bt
 		_barco.centered = false
-		_barco.material = m
+		_barco.material = _material(d, false, d.get("barco_mueve", ""))
 		_barco.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 		_barco.visible = false
 		add_child(_barco)
@@ -210,9 +211,12 @@ func _al_acabar() -> void:
 	_video.visible = false
 	acabado.emit()
 
-func _material(d: Dictionary, es_reflejo: bool) -> ShaderMaterial:
+func _material(d: Dictionary, es_reflejo: bool, mueve := "") -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = SHADER
+	if mueve != "":
+		m.set_shader_parameter("mueve", load(mueve))
+		m.set_shader_parameter("con_mueve", true)
 	# (templo.json "grado": filas = canal de salida RGB, la ultima columna se suma)
 	var g: Array = d["grado"]
 	m.set_shader_parameter("grado", Basis(_columna(g, 0), _columna(g, 1), _columna(g, 2)))

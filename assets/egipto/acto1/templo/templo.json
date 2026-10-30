@@ -86,5 +86,7 @@
    186
   ],
   "cuanto": 0.18
- }
+ },
+ "mueve": "res://assets/egipto/acto1/templo/mueve.png",
+ "barco_mueve": "res://assets/egipto/acto1/templo/barco_mueve.png"
 }
