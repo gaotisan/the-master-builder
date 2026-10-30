@@ -574,6 +574,22 @@ def igualar_luz(bgra, dL=0.0, da=0.0, db=0.0, contraste=1.0, croma=1.0):
     return np.dstack([out, bgra[..., 3]])
 
 
+# LAS MOTAS SUELTAS de la orilla (2026-10-30, el usuario: "un cuadradito azul en
+# la orilla, habria que eliminar"): una mancha blanquiazul en la linea del agua
+# (un pajaro blanco de la imagen, de 8 px). (x, y, radio) en px de la tira de la
+# orilla; se rellenan con lo de alrededor (inpaint), el alfa igual.
+MOTAS_ORILLA = [(2540, 832, 9)]
+
+
+def sin_motas(bgra, motas):
+    m = np.zeros(bgra.shape[:2], np.uint8)
+    for x, y, r in motas:
+        cv2.circle(m, (int(x), int(y)), int(r), 255, -1)
+    out = bgra.copy()
+    out[..., :3] = cv2.inpaint(np.ascontiguousarray(bgra[..., :3]), m, 5, cv2.INPAINT_TELEA)
+    return out
+
+
 def aire(bgra, color_bgr, k):
     """Mezcla el color con el del aire (el cielo del horizonte) en la proporcion k."""
     c = bgra[..., :3].astype(np.float32) * (1 - k) + np.array(color_bgr, np.float32) * k
@@ -814,6 +830,7 @@ def medio(vista):
     orilla = igualar_luz(orilla, **LUZ_ORILLA)
     if HORIZONTE is not None:
         orilla = aire(orilla, HORIZONTE, AIRE_ORILLA)
+    orilla = sin_motas(orilla, MOTAS_ORILLA)
     borde = borde_playa(M)
     yb = float(np.median(borde))
     y0 = (0 - T.Y_PISA) * ESCALA_MEDIO - T.PLANTA

@@ -691,7 +691,8 @@
    "nombre": "plantas_a_0",
    "luz": 1.0,
    "detras": false,
-   "sombra": false
+   "sombra": false,
+   "z": 5
   },
   {
    "tex": "res://assets/egipto/acto1/adornos/plantas_a_5.png",
@@ -706,7 +707,8 @@
    "nombre": "plantas_a_5",
    "luz": 1.0,
    "detras": false,
-   "sombra": false
+   "sombra": false,
+   "z": 5
   },
   {
    "tex": "res://assets/egipto/acto1/adornos/plantas_b_1.png",
@@ -721,7 +723,8 @@
    "nombre": "plantas_b_1",
    "luz": 1.0,
    "detras": false,
-   "sombra": false
+   "sombra": false,
+   "z": 5
   },
   {
    "tex": "res://assets/egipto/acto1/adornos/atrezzo_a_6.png",
@@ -736,7 +739,8 @@
    "nombre": "atrezzo_a_6",
    "luz": 1.0,
    "detras": false,
-   "sombra": false
+   "sombra": false,
+   "z": 5
   },
   {
    "tex": "res://assets/egipto/acto1/adornos/atrezzo_b_3.png",

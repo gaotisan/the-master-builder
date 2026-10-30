@@ -22,6 +22,7 @@ va rio abajo, y el video a partir de ahi lo lleva borrado: a la derecha de la
 gente, el templo vacio (su ultimo fotograma), encajado en cada fotograma.
 
 Uso: python tools/egipto/templo_rio.py [--vista carpeta] [--cantos (solo los canticos)]
+     [--barco (solo el barco suelto)]
      [--recortar-barco (rembg: el barco del video a raw, una vez)]
 """
 import json
@@ -231,6 +232,8 @@ HUNDIR = 8
 COLOR_QUIETO = 12    # diferencia (0-255) con lo de siempre por debajo de la cual un px de atras es eso
 SIEMPRE = 0.85       # parte de los fotogramas con la que un px de atras esta en todos
 HUECO_MAX = 60       # px del hueco mas grande que se rellena en el remero de atras
+FONDO_DIF = 14       # (0-255) por debajo, un px de la zona del remero es el fondo de detras (fuera)
+HUECO_DIF = 10       # (0-255) lo que se tiene que separar del fondo un px de un hueco para rellenarse
 RECORTE = (760, 380, 1280, 650)    # x0, y0, x1, y1 donde se busca el barco
 POR_FOTOGRAMA = 4.87 # px que avanza (seguido con subpixel del 526 al 556; luego el video da un salto)
 BANDA = (790, 395)   # desde aqui (x, y) el video lleva el barco borrado (la gente, a la izquierda)
@@ -627,6 +630,11 @@ def barco(carpeta, ult, tramos):
         # entre el remo, las piernas y la popa se llenaba entera)
         n, lab, st, _ = cv2.connectedComponentsWithStats(((lleno == 0) & (sil == 0)).astype(np.uint8))
         huecos = np.isin(lab, [c for c in range(1, n) if st[c, 4] <= HUECO_MAX])
+        # (y de ellos, solo lo que no es el fondo de detras: el hueco que encierran
+        # el remo, el brazo y las piernas es piedra del fondo, y rellenado salia
+        # una mancha crema distinta en cada fotograma: "vibra, restos de pixeles
+        # mucho mas brillantes", 2026-10-30)
+        huecos &= dif > HUECO_DIF
         a = np.maximum(a, (sil | huecos).astype(np.float32) * zona_m)
         al = np.maximum(rigido, a)
         # solo lo pegado al barco
@@ -655,7 +663,7 @@ def barco(carpeta, ult, tramos):
         guardar(os.path.join(RETOQUE, "_auto", nombre), auto)
         if not os.path.exists(os.path.join(RETOQUE, nombre)):
             guardar(os.path.join(RETOQUE, nombre), auto)
-        lienzos.append((nombre, rgba))
+        lienzos.append((nombre, rgba, ps[:CORTE - oy]))
         k += 1
     # LO QUIETO DE ATRAS, QUIETO (2026-10-29, el usuario: la parte de atras, donde
     # el remero, "sigue titilando, vibrando"): en la zona del remero, en cada
@@ -666,7 +674,21 @@ def barco(carpeta, ult, tramos):
     pila = np.stack([l[1] for l in lienzos])
     mediana = np.median(pila[..., :3], 0)
     zona = (zona_m[:CORTE - oy] > 0)[..., None]
-    for nombre, rgba in lienzos:
+    for nombre, rgba, fondo in lienzos:
+        # LO QUE ES EL FONDO, FUERA (2026-10-30, el usuario: atras "vibra, tiene
+        # restos de pixeles mucho mas brillantes"): en la zona del remero, lo que
+        # casi no se distingue del templo vacio de detras (manchas de piedra
+        # crema entre el brazo, el remo y las piernas, cada fotograma en un sitio)
+        casi = np.abs(cv2.GaussianBlur(rgba[..., :3], (0, 0), 0.8) - cv2.GaussianBlur(fondo, (0, 0), 0.8)).max(-1)
+        es_fondo = np.clip(1 - (casi - FONDO_DIF) / FONDO_DIF, 0, 1) * zona[..., 0]
+        # (y solo lo de color de piedra crema: claro y calido sin el rojo de la
+        # piel; la madera, el remo, la ropa y el tocado blancos, no: detras de la
+        # cubierta el fondo es oscuro y se la comia)
+        lb = cv2.cvtColor(np.clip(rgba[..., :3], 0, 255).astype(np.uint8), cv2.COLOR_BGR2LAB).astype(np.float32)
+        crema = (np.clip((lb[..., 0] - 140) / 20, 0, 1) * np.clip((lb[..., 2] - 128 - 16) / 8, 0, 1)
+                 * np.clip((128 + 22 - lb[..., 1]) / 6, 0, 1))
+        es_fondo *= crema
+        rgba[..., 3] *= 1 - es_fondo
         dif = np.abs(rgba[..., :3] - mediana).max(-1, keepdims=True)
         w = np.clip(1 - (dif - COLOR_QUIETO) / COLOR_QUIETO, 0, 1) * zona
         rgba[..., :3] = rgba[..., :3] * (1 - w) + mediana * w
@@ -756,6 +778,11 @@ def main():
         return
     if "--mueve" in sys.argv:
         mascaras_mueve(DESTINO)
+        return
+    if "--barco" in sys.argv:
+        # (solo el barco suelto: sin el video ni la orilla; templo.json no cambia)
+        ultimo = leer(os.path.join(ORIGEN, "ultimo.png"))
+        barco(os.path.join(DESTINO, "barco"), ultimo, medir_tramos())
         return
     vista = sys.argv[sys.argv.index("--vista") + 1] if "--vista" in sys.argv else None
     os.makedirs(DESTINO, exist_ok=True)

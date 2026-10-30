@@ -165,6 +165,7 @@ BANDADA = {
 # (2026-10-28, el usuario: fuera la palmera, el gato y el brasero, "no pegan en
 # las ruinas"; y la arena, como estaba, no funcionaba)
 ARENA_Y = 837.0 - 85.0 / 1.8      # la linea de la arena en la imagen del templo
+DELANTE_PEREGRINO = 5             # z: por encima del peregrino (0) y de su baculo (hasta 3)
 ADORNOS = [
     # enredaderas: del puente, del pilar, de la losa, de las repisas y de la terraza
     ["colgantes_b_3", "techo", 252, 549, 0.38, False, 10, {"repisa": 520}],
@@ -203,10 +204,14 @@ ADORNOS = [
     ["arena_dunas_a_0", "pie", 1420, ARENA_Y, 1.0, True, 0, {"hunde": 10}],
     ["arena_dunas_b_3", "pie", 1850, ARENA_Y, 0.7, False, 0, {"hunde": 10}],
     ["arena_dunas_b_5", "pie", 1110, ARENA_Y, 0.9, False, 0, {"hunde": 8}],
-    ["plantas_a_0", "pie", 222, ARENA_Y, 0.3, True, 6, {"hunde": 20}],
-    ["plantas_a_5", "pie", 1748, ARENA_Y, 0.5, True, 7, {"hunde": 24}],
-    ["plantas_b_1", "pie", 1885, ARENA_Y, 0.5, False, 5, {"hunde": 24}],
-    ["atrezzo_a_6", "pie", 2010, ARENA_Y, 0.55, False, 0, {"hunde": 16}],
+    # (lo plantado en la arena de la playa, por DELANTE del peregrino: esta a la
+    # altura de sus pies o mas cerca; detras, la piedra de jeroglificos le
+    # quedaba atravesada por los pies; 2026-10-30, el usuario: "deberian quedar
+    # por delante de el")
+    ["plantas_a_0", "pie", 222, ARENA_Y, 0.3, True, 6, {"hunde": 20, "z": DELANTE_PEREGRINO}],
+    ["plantas_a_5", "pie", 1748, ARENA_Y, 0.5, True, 7, {"hunde": 24, "z": DELANTE_PEREGRINO}],
+    ["plantas_b_1", "pie", 1885, ARENA_Y, 0.5, False, 5, {"hunde": 24, "z": DELANTE_PEREGRINO}],
+    ["atrezzo_a_6", "pie", 2010, ARENA_Y, 0.55, False, 0, {"hunde": 16, "z": DELANTE_PEREGRINO}],
     # LA ESTELA, abajo a la izquierda, al pie de la losa (2026-10-28, el usuario:
     # "una piedra con jeroglificos de gran tamano"; sin plantas en la losa:
     # "mejor sin plantas"); por delante de la losa (z)
