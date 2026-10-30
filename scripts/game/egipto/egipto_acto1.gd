@@ -892,8 +892,8 @@ func _cajas_en_uv(m: ShaderMaterial, d: Dictionary, cajas: Array) -> void:
 	m.set_shader_parameter("canto_suave", 18.0 / alto)
 
 ## EL SOL EN EL PEREGRINO (sol_peregrino.gdshader): el borde de luz del lado del
-## sol, que en el mundo esta siempre arriba a la izquierda (con flip_h, en la
-## textura, al otro lado).
+## sol, que en el mundo esta siempre arriba a la izquierda (el volteo lo resuelve
+## el shader: desde aqui llegaba un fotograma tarde al acabar los giros).
 var _sol: ShaderMaterial
 
 func _sol_peregrino() -> void:
@@ -902,8 +902,6 @@ func _sol_peregrino() -> void:
 		_sol = ShaderMaterial.new()
 		_sol.shader = preload("res://scripts/game/egipto/sol_peregrino.gdshader")
 		sp.material = _sol
-	if _sol:
-		_sol.set_shader_parameter("sol_tex", Vector2(0.75 if sp.flip_h else -0.75, -0.65))
 
 ## La piedra del recorrido junto a la arena: mas oscura y mas fria en los
 ## PIE_BANDA px de abajo (la luz que rebota del cielo no llega).
