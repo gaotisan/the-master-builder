@@ -368,6 +368,10 @@ const RADIO_GARRA := 34.0
 ## la hojarasca al camino ya no se vuelven a leer: sumaban al tiron de entrada).
 static var _datos := {}
 static var _texturas := {}
+## Las garras de la vuelta (vuelta_garra.json y sus 16 png), igual: cargarlas en
+## cada corte de camara entre planos del bosque era lo que mas tardaba al entrar
+## (2026-10-30: de 190 a 680 ms con la maquina cargada).
+static var _vuelta_garra_comun := {}
 
 
 static func _cargar_datos() -> Dictionary:
@@ -460,13 +464,14 @@ func _ready() -> void:
 	_esfera_delante.z_index = Z_BOLA_DELANTE["Orbe"]
 	_esfera_delante.visible = false
 	_bola.get_node("Madera").add_child(_esfera_delante)
-	if FileAccess.file_exists(VUELTA_GARRA):
+	if _vuelta_garra_comun.is_empty() and FileAccess.file_exists(VUELTA_GARRA):
 		var vg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(VUELTA_GARRA))
 		for anim in vg:
-			_vuelta_garra[anim] = {}
+			_vuelta_garra_comun[anim] = {}
 			for f in vg[anim]:
-				_vuelta_garra[anim][int(f)] = [Vector2(vg[anim][f][0], vg[anim][f][1]),
+				_vuelta_garra_comun[anim][int(f)] = [Vector2(vg[anim][f][0], vg[anim][f][1]),
 					load("res://assets/characters/peregrino/vuelta_garra/%s_%03d.png" % [anim, int(f)])]
+	_vuelta_garra = _vuelta_garra_comun
 	_halo_delante.show_behind_parent = false
 	_halo_delante.z_as_relative = false
 	_halo_delante.z_index = Z_BOLA_DELANTE["Orbe"]
