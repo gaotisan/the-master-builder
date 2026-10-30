@@ -123,6 +123,12 @@ var en_flotar := false:
 		if is_node_ready():
 			_colocar()
 var _flotar: Dictionary = {}
+## EL BASTON SIGUE A LA CAPA (2026-10-30): en el salto corriendo la tunica de
+## atras sube como una vela y el baston, atado a ella, se va hacia atras con ella
+## en vez de colgar suelto (baston_capa.json, de tools/anim/baston_capa.py; en
+## lugar de baston_seguimiento.json para esas animaciones).
+const CAPA := "res://assets/characters/baston/baston_capa.json"
+var _capa: Dictionary = {}
 var _sprite: AnimatedSprite2D
 var _visible_anim := true
 var _alfa := 1.0
@@ -159,6 +165,8 @@ func _ready() -> void:
 		_caida = JSON.parse_string(FileAccess.open(CAIDA, FileAccess.READ).get_as_text())
 	if FileAccess.file_exists(FLOTAR):
 		_flotar = JSON.parse_string(FileAccess.open(FLOTAR, FileAccess.READ).get_as_text())
+	if FileAccess.file_exists(CAPA):
+		_capa = JSON.parse_string(FileAccess.open(CAPA, FileAccess.READ).get_as_text())
 	if not particulas:
 		for p in [_recarga, _estallido, _chispas]:
 			p.emitting = false
@@ -395,6 +403,9 @@ func _colocar() -> void:
 	# (la bola, como en el salto: su resplandor encima, asomando tras la capucha)
 	if en_flotar and _flotar.has(String(_sprite.animation)):
 		_colocar_en_caida(_flotar[String(_sprite.animation)], 2)
+		return
+	if _capa.has(String(_sprite.animation)):
+		_colocar_en_caida(_capa[String(_sprite.animation)], 2)
 		return
 	if lista == null:
 		_visible_anim = false

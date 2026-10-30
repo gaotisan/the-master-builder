@@ -66,21 +66,41 @@ def pegar(p, x, y, rot):
 GOLPE=7          # el sprite de caida en que se estampa: antes, sin baston
 def corte(p, x, y, rot):
     """Hasta donde se ve la madera por debajo del pivote sin salir de la silueta
-    por abajo (fraccion de la textura, desde arriba)."""
-    a=p[...,3]>100; H,W=a.shape; cx,cy=W/2,H/2
-    d=(math.sin(rot), math.cos(rot))     # hacia abajo por el baston (giro horario)
+    por abajo (fraccion de la textura, desde arriba).
+    (2026-10-30, el usuario: "la parte baja del baculo se veia suelta" a cuatro
+    patas: se media por la diagonal del otro lado, hacia abajo a la derecha, y
+    el baston va hacia abajo a la izquierda; asomaba la punta bajo la manga. Y
+    la silueta encogida lo que mide la madera de ancho, que no asome de lado.)"""
+    a=cv2.erode((p[...,3]>100).astype(np.uint8),np.ones((7,7),np.uint8))>0; H,W=a.shape; cx,cy=W/2,H/2
     dentro=False; ultimo=0
     for L in range(0, 190):
-        px=int(round(cx+x-d[0]*-L if False else cx+x-L*math.sin(-rot))); py=int(round(cy+y+L*math.cos(rot)))
+        # (el giro es horario: hacia abajo por el baston es (-sin, cos))
+        px=int(round(cx+x-L*math.sin(rot))); py=int(round(cy+y+L*math.cos(rot)))
         if 0<=px<W and 0<=py<H and a[py,px]:
             dentro=True; ultimo=L
         elif dentro:
             break
     return round(min((40+max(ultimo-14,0))/229.0,1.0),3)
+# EL GIRO DEL FINAL DEL LEVANTARSE (2026-10-30, el usuario: al ponerse de pie "el
+# baculo pasa de estar en un lado al otro rapido, con un corte"): de frente va a
+# la derecha de la capucha y el reposo (de perfil, baston_seguimiento.json) lo
+# lleva a la espalda, a la izquierda. En los fotogramas del giro (GIRO) pasa por
+# detras de la capucha hasta donde lo pone el reposo respecto a ella, y acaba en
+# el primero del reposo tal cual.
+GIRO=(47,58)
+REPOSO0=json.load(open('assets/characters/baston/baston_seguimiento.json'))['reposo'][0][:3]
+_fr,_=frames('reposo'); _p=img(_fr[0]); _hx,_ty=anclas(_p)
+PERFIL=(REPOSO0[0]-(_hx-_p.shape[1]/2), REPOSO0[1]-(_ty-_p.shape[0]/2), REPOSO0[2])
+def suavizar(filas, k=5):
+    arr=np.array(filas)
+    if len(arr)>k:
+        pad=np.pad(arr,((k//2,k//2),(0,0)),mode='edge')
+        arr=np.array([pad[i:i+k].mean(0) for i in range(len(arr))])
+    return arr
 datos={}
 for n in ['caida','tumbado','levantarse']:
     fr,_=frames(n)
-    filas=[]
+    filas=[]; perfil=[]
     for s in fr:
         p=img(s); hx,ty=anclas(p)
         a=p[...,3]>128; ys=np.nonzero(a.any(1))[0]
@@ -99,13 +119,21 @@ for n in ['caida','tumbado','levantarse']:
         x=de_pie[0]*(1-tumb)+tumbado[0]*tumb; y=de_pie[1]*(1-tumb)+tumbado[1]*tumb
         rot=ROT*(1-tumb)+0.35*tumb
         filas.append([x-W/2, y-H/2, rot])
-    arr=np.array(filas); k=5
-    if len(arr)>k:
-        pad=np.pad(arr,((k//2,k//2),(0,0)),mode='edge')
-        arr=np.array([pad[i:i+k].mean(0) for i in range(len(arr))])
+        perfil.append([hx-W/2+PERFIL[0], ty-H/2+PERFIL[1], PERFIL[2]])
+    arr=suavizar(filas)
+    if n=='levantarse':
+        # el giro: de lo de frente a lo de perfil, la bola por detras de la capucha;
+        # y el ultimo, el primero del reposo exacto
+        per=suavizar(perfil)
+        per+=(np.array(REPOSO0)-per[-1])*np.linspace(0,1,len(per))[:,None]**4
+        t=np.clip((np.arange(len(arr))-GIRO[0])/(GIRO[1]-GIRO[0]),0,1)
+        t=(t*t*(3-2*t))[:,None]
+        arr=arr*(1-t)+per*t
     rows=[]
     for i,(x,y,r) in enumerate(arr):
         c=corte(img(fr[i]),x,y,r)
+        if n=='levantarse' and i>=GIRO[1]:
+            c=1.0   # (ya de perfil: entero, como en el reposo; recortado cambiaba al entrar)
         vis = 0 if (n!='caida' or i>=GOLPE) else -1
         rows.append([round(float(x),1),round(float(y),1),round(float(r),3),vis,c])
     datos[n]=rows
