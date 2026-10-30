@@ -52,6 +52,12 @@ var _espuma_mat: ShaderMaterial
 var barco_dura := 90.0
 ## Lo que tarda en meterse en el agua tras el relevo (templo.json "hundir").
 var hundir_en := 1.5
+## EL REMO LIMPIO (2026-10-30): con templo.json "ciclo" los fotogramas son una
+## palada entera en bucle (desde "inicio", la pose mas parecida a la del video en
+## el relevo); y "antes", los del barco del video, que en el relevo se ven enteros
+## y se funden en estos en antes_funde s (px a px, en templo_rio.gdshader).
+var antes_funde := 1.0
+var _antes_fot: Array[Texture2D] = []
 
 func montar(d: Dictionary) -> void:
 	_px = float(d.get("px", 1.0))
@@ -92,6 +98,8 @@ func montar(d: Dictionary) -> void:
 		_barco_d = d["barco"]
 		for ruta in _barco_d["fotogramas"]:
 			_barco_fot.append(load(ruta))
+		for ruta in _barco_d.get("antes", []):
+			_antes_fot.append(load(ruta))
 		var bt: Texture2D = _barco_fot[-1]
 		_barco = Sprite2D.new()
 		_barco.texture = bt
@@ -179,13 +187,29 @@ func _process(delta: float) -> void:
 		_espuma.queue_free()
 		_barco = null
 		return
-	# el remo: del fotograma del relevo (el ultimo) hacia atras y vuelta
 	var n := _barco_fot.size()
-	var f := int(_barco_t * float(_barco_d["fps"])) % maxi(2 * (n - 1), 1)
-	var i := n - 1 - f if f < n else f - n + 1
+	var paso := int(_barco_t * float(_barco_d["fps"]))
+	var i: int
+	if _barco_d.get("ciclo", false):
+		# el remo limpio: la palada en bucle
+		i = (int(_barco_d["inicio"]) + paso) % n
+	else:
+		# el remo del video: del fotograma del relevo (el ultimo) hacia atras y vuelta
+		var f := paso % maxi(2 * (n - 1), 1)
+		i = n - 1 - f if f < n else f - n + 1
 	var tex := _barco_fot[i]
 	_barco.texture = tex
 	_barco_reflejo.texture = tex
+	# el relevo: el de antes (del relevo hacia atras, como iba) fundiendose en este
+	if not _antes_fot.is_empty():
+		var peso := 1.0 - smoothstep(0.0, antes_funde, _barco_t)
+		var antes := _antes_fot[maxi(_antes_fot.size() - 1 - paso, 0)]
+		for s in [_barco, _barco_reflejo]:
+			var bm: ShaderMaterial = s.material
+			bm.set_shader_parameter("antes", antes)
+			bm.set_shader_parameter("antes_peso", peso)
+		if peso <= 0.0:
+			_antes_fot.clear()
 	# un poco mas metido en el agua, poco a poco tras el relevo: lo de abajo,
 	# recortado, y el barco bajado lo mismo (la linea del agua no se mueve)
 	var hondo := float(_barco_d.get("hundir", 0.0)) * smoothstep(0.0, hundir_en, _barco_t)
@@ -201,7 +225,11 @@ func _process(delta: float) -> void:
 	_espuma.position = Vector2(x - ESTELA * _px, float(_barco_d["y"]) + float(esp["linea"]) - 6.0 * _px)
 	_espuma_mat.set_shader_parameter("avance", float(_barco_d["velocidad"]) * _barco_t / _px)
 	var sal: Array = esp["salpica"]
-	_espuma_mat.set_shader_parameter("salpica", smoothstep(float(sal[0]) - 2.0, float(sal[0]) + 4.0, float(i)))
+	if sal.size() == n:
+		# (el remo limpio: cuanto remo hay en el agua en cada fotograma)
+		_espuma_mat.set_shader_parameter("salpica", float(sal[i]))
+	else:
+		_espuma_mat.set_shader_parameter("salpica", smoothstep(float(sal[0]) - 2.0, float(sal[0]) + 4.0, float(i)))
 	_espuma_mat.set_shader_parameter("fuerza", espuma_fuerza * clampf(_barco_t / espuma_entra, 0.0, 1.0))
 
 func _al_acabar() -> void:

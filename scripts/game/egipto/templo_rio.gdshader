@@ -40,6 +40,11 @@ uniform bool con_mueve = false;
 // torcer el tono (una curva por canal lo dejaba rosado, 2026-10-29)
 uniform vec3 velo_color = vec3(0.67, 0.76, 0.78);
 uniform float velo = 0.0;
+// EL RELEVO SIN SALTO (2026-10-30, el barco del remo limpio): el fotograma del
+// barco de antes (el del video del templo, mismo tamano que la textura) y cuanto
+// se ve de el (1 = ese entero, 0 = el de la textura); se mezcla px a px.
+uniform sampler2D antes : filter_linear, hint_default_transparent;
+uniform float antes_peso = 0.0;
 
 varying vec4 tinte;
 
@@ -54,6 +59,17 @@ vec4 muestra(sampler2D t, vec2 uv) {
 	float a = c.a * (1.0 - clamp((verde * 255.0 - 25.0) / 70.0, 0.0, 1.0));
 	c.g = min(c.g, max(c.r, c.b) + 6.0 / 255.0);
 	return vec4(c.rgb * a, a);
+}
+
+// (premultiplicado: donde los dos tapan, siempre tapa; sin croma el de antes, y
+// no por muestra(): Godot no deja pasarle TEXTURE y un uniform a la vez)
+vec4 dibujo(sampler2D t, vec2 uv) {
+	vec4 c = muestra(t, uv);
+	if (antes_peso <= 0.0) {
+		return c;
+	}
+	vec4 a = texture(antes, uv);
+	return mix(c, vec4(a.rgb * a.a, a.a), antes_peso);
 }
 
 void fragment() {
@@ -75,7 +91,7 @@ void fragment() {
 		for (int i = -4; i <= 4; i++) {
 			float k = float(i) / 4.0;
 			vec2 d = vec2(sin(float(i) * 2.3) * 3.0 * t.x, k * h);
-			c += muestra(TEXTURE, uv + d) * (1.0 - 0.5 * abs(k));
+			c += dibujo(TEXTURE, uv + d) * (1.0 - 0.5 * abs(k));
 		}
 		// (los pesos suman 6,5)
 		c /= 6.5;
@@ -102,9 +118,9 @@ void fragment() {
 		// (un poco suavizado: el video trae el doble de detalle que la pintura
 		// de la orilla y resaltaba)
 		vec2 s = suave * TEXTURE_PIXEL_SIZE;
-		c = muestra(TEXTURE, uv) * 0.4
-			+ (muestra(TEXTURE, uv + s) + muestra(TEXTURE, uv - s)
-			+ muestra(TEXTURE, uv + vec2(s.x, -s.y)) + muestra(TEXTURE, uv + vec2(-s.x, s.y))) * 0.15;
+		c = dibujo(TEXTURE, uv) * 0.4
+			+ (dibujo(TEXTURE, uv + s) + dibujo(TEXTURE, uv - s)
+			+ dibujo(TEXTURE, uv + vec2(s.x, -s.y)) + dibujo(TEXTURE, uv + vec2(-s.x, s.y))) * 0.15;
 		c.rgb = c.a > 0.001 ? c.rgb / c.a * luz : vec3(0.0);
 	}
 	vec3 rgb = mix(grado * c.rgb + grado_add, velo_color, velo);

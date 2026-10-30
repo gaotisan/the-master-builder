@@ -260,6 +260,21 @@ SALPICA = (546, 556)
 # en el ultimo (el del relevo) fuera del remero de atras vale para todos.
 RETOQUE = os.path.join(ORIGEN, "barco_retoque")
 PROA_DESDE = 1262    # x del video desde donde manda la proa del PROA
+# EL REMO LIMPIO (2026-10-30): el usuario trae el mismo barco redibujado limpio
+# (ChatGPT) y hecho video, remo_limpio.mp4: croma verde con una franja negra
+# abajo, camara quieta (tiembla < 1 px) y solo el de atras remando. Desde ahi el
+# barco suelto es ese entero: lo quieto, la mediana de todo el video (sin el
+# titilar de la compresion en los bordes), y el remero con su remo, de cada
+# fotograma; encajado en el lienzo del barco.png y con su color. En el juego, en
+# bucle (una palada entera); en el relevo el de antes (el del video del templo,
+# barco/antes_NN.png) se funde en el (TemploRio).
+REMO_LIMPIO = os.path.join(ORIGEN, "remo_limpio.mp4")
+CICLO = (23, 95)       # una palada: el 95 vuelve a la pose del 23 (medido en la zona del remero)
+CICLO_FUNDE = 6        # los ultimos se funden con los de antes del 23: el cierre sin salto
+CASCO_LIMPIO = (440, 615, 720, 1240)   # y0, y1, x0, x1: lo que se sigue para quitar el temblor
+NEGRO_DESDE = 620      # fila desde la que el fondo del video limpio es la franja negra
+VERDE_DESDE = 14       # exceso de verde por debajo del cual un px es del barco
+MOVIL_LIMPIO = 10      # desviacion (0-255) por encima de la cual un px se mueve (el remero)
 
 
 # LO QUE SE MUEVE UN POCO (2026-10-29, el usuario: "las banderas rojas ... simular
@@ -697,6 +712,8 @@ def barco(carpeta, ult, tramos):
         r = cv2.resize(rgba, None, fx=REDUCE, fy=REDUCE, interpolation=cv2.INTER_AREA)
         ar = np.maximum(r[..., 3:] / 255.0, 1e-6)
         r[..., :3] = np.where(r[..., 3:] > 0.5, r[..., :3] / ar, 0)
+        # (con el remo limpio, estos son los de antes: solo para el relevo)
+        nombre = ("antes_" if os.path.exists(REMO_LIMPIO) else "") + nombre
         guardar(os.path.join(carpeta, nombre), np.clip(r, 0, 255).astype(np.uint8))
         rutas.append(RES + "barco/" + nombre)
     return {
@@ -713,6 +730,225 @@ def barco(carpeta, ult, tramos):
                    "linea": round((CORTE - oy) * REDUCE, 2),
                    "salpica": [SALPICA[0] - REMO, SALPICA[1] - REMO]},
     }
+
+
+def encajar(nueva, v, ox, oy):
+    """La escala (x, y) y el sitio con que nueva (RGBA: otro dibujo del mismo
+    barco) mejor casa con v (el barco.png) en lo rigido: casco, sarcofago y vela,
+    sin el remero ni el agua. Devuelve (ex, ey, dx, dy), lo que casa y la mascara
+    de lo rigido."""
+    alto, ancho = v.shape[:2]
+
+    def gris(im):
+        a = im[..., 3:4] / 255.0
+        g = cv2.cvtColor((im[..., :3] * a).astype(np.uint8), cv2.COLOR_BGR2GRAY).astype(np.float32)
+        return cv2.GaussianBlur(g, (0, 0), 1.0)
+    movil = np.zeros((alto, ancho), bool)
+    for x0, x1, y0, y1 in ZONAS_REMO:
+        movil[max(0, y0 - oy):y1 - oy, x0 - ox:x1 - ox] = True
+    ref = (v[..., 3] > 128) & ~movil
+    ref[CORTE - oy - 6:] = False
+    ys, xs = np.nonzero(ref)
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    plantilla, mascara = gris(v)[y0:y1, x0:x1], ref[y0:y1, x0:x1].astype(np.uint8)
+    # (primero la escala por el ancho, con el remo; luego se busca alrededor)
+    xs_v = np.nonzero(v[..., 3] > 128)[1]
+    xs_n = np.nonzero(nueva[..., 3] > 128)[1]
+    e0 = (xs_v.max() - xs_v.min()) / float(xs_n.max() - xs_n.min())
+    mejor = None
+    margen = 40
+    for ex in e0 * np.arange(0.90, 1.10, 0.006):
+        for ey in e0 * np.arange(0.88, 1.12, 0.006):
+            g = cv2.copyMakeBorder(gris(cv2.resize(nueva, None, fx=ex, fy=ey, interpolation=cv2.INTER_AREA)),
+                                   margen, margen, margen, margen, cv2.BORDER_CONSTANT, value=0)
+            if g.shape[0] < plantilla.shape[0] or g.shape[1] < plantilla.shape[1]:
+                continue
+            r = cv2.matchTemplate(g, plantilla, cv2.TM_CCORR_NORMED, mask=mascara)
+            _, m, _, (lx, ly) = cv2.minMaxLoc(r)
+            if mejor is None or m > mejor[0]:
+                mejor = (m, ex, ey, x0 + margen - lx, y0 + margen - ly)
+    m, ex, ey, dx, dy = mejor
+    return (ex, ey, float(dx), float(dy)), m, ref
+
+
+def remo_limpio(carpeta, tramos, antes):
+    """El barco suelto del remo limpio: un PNG por fotograma de la palada, en el
+    lienzo del barco.png y cortado en la linea del agua. antes: lo que devuelve
+    barco() (sus fotogramas, ya como antes_NN). Devuelve lo que va en templo.json."""
+    v = leer(os.path.join(ORIGEN, "barco.png"), cv2.IMREAD_UNCHANGED)
+    d = json.load(open(os.path.join(ORIGEN, "barco.json"), encoding="utf-8"))
+    ox, oy = d["x"], d["y"]
+    alto, ancho = v.shape[:2]
+    cap = cv2.VideoCapture(REMO_LIMPIO)
+    fot = []
+    while True:
+        ok, f = cap.read()
+        if not ok:
+            break
+        fot.append(f.astype(np.float32))
+    a0, a1 = CICLO
+    h, w = fot[0].shape[:2]
+    # el croma: el verde de las esquinas de arriba; abajo, la franja negra
+    esq = np.concatenate([fot[a0][:40, :40].reshape(-1, 3), fot[a0][:40, -40:].reshape(-1, 3)])
+    verde_fondo = np.median(esq, 0)
+    exceso_fondo = verde_fondo[1] - max(verde_fondo[0], verde_fondo[2])
+
+    def recorte(f):
+        """Premultiplicado (color * alfa, alfa 0-1), sin la mezcla con el fondo en
+        el borde y sin derrame de verde."""
+        exceso = f[..., 1] - np.maximum(f[..., 0], f[..., 2])
+        a = 1 - np.clip((exceso - VERDE_DESDE) / (exceso_fondo * 0.8 - VERDE_DESDE), 0, 1)
+        # abajo, y en el paso del verde a la franja negra (verde oscuro: con la
+        # clave de arriba quedaba una raya clara bajo el remo): fondo es lo que
+        # cae en la recta del verde al negro, k * verde (como sombra.ps1)
+        b_ = f[NEGRO_DESDE - 10:]
+        k = np.clip(b_[..., 1] / max(verde_fondo[1], 1.0), 0, 1)[..., None]
+        resto = np.abs(b_ - k * verde_fondo)[..., [0, 2]].max(-1)
+        a[NEGRO_DESDE - 10:] = np.minimum(a[NEGRO_DESDE - 10:], np.clip((resto - 10) / 25, 0, 1))
+        a3 = a[..., None]
+        fondo = np.empty_like(f)
+        fondo[:] = verde_fondo
+        fondo[NEGRO_DESDE - 10:] = k * verde_fondo
+        c =(f - (1 - a3) * fondo) / np.maximum(a3, 0.05)
+        # (el verde que sobra: lo dorado, la piel, la madera y la vela no lo tienen)
+        c[..., 1] = np.minimum(c[..., 1], np.maximum(c[..., 0], c[..., 2]) + 4)
+        return np.dstack([np.clip(c, 0, 255) * a3, a])
+
+    # sin el temblor de la camara: todo al del principio de la palada
+    y0, y1, x0, x1 = CASCO_LIMPIO
+    gc = lambda f: cv2.cvtColor(f[y0:y1, x0:x1].astype(np.uint8), cv2.COLOR_BGR2GRAY).astype(np.float32)
+    ref = gc(fot[a0])
+    quietos = []
+    for f in fot:
+        (sx, sy), _ = cv2.phaseCorrelate(ref, gc(f))
+        M = np.float32([[1, 0, -sx], [0, 1, -sy]])
+        quietos.append(cv2.warpAffine(recorte(f), M, (w, h), flags=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE))
+    pila = np.stack(quietos)
+    # lo quieto: la mediana; lo que se mueve (el remero y su remo), de cada uno
+    quieto = np.median(pila, 0)
+    gris = pila[..., :3].mean(-1)
+    se_mueve = (gris.std(0) > MOVIL_LIMPIO).astype(np.uint8)
+    se_mueve = cv2.morphologyEx(se_mueve, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    # (solo la mancha grande, el remero y su remo: los bordes finos de la verga, la
+    # borda y el de delante titilan por la compresion y se colaban)
+    n, lab_, st, _ = cv2.connectedComponentsWithStats(se_mueve)
+    se_mueve = (lab_ == 1 + np.argmax(st[1:, 4])).astype(np.uint8)
+    se_mueve = cv2.morphologyEx(se_mueve, cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8))
+    movil = np.clip(cv2.GaussianBlur(cv2.dilate(se_mueve, np.ones((9, 9), np.uint8)).astype(np.float32), (0, 0), 3), 0, 1)
+    print("remo limpio: %d fotogramas, el remero en %d px" % (len(fot), int(se_mueve.sum())))
+    # encajado en el lienzo del barco.png, con el color del video (en lo rigido)
+    q8 = np.dstack([quieto[..., :3] / np.maximum(quieto[..., 3:], 1e-3), quieto[..., 3:] * 255]).clip(0, 255).astype(np.uint8)
+    (ex, ey, dx, dy), casa, rig = encajar(q8, v, ox, oy)
+    print("remo limpio encajado: casa %.3f, escala %.4f x %.4f, en %.0f, %.0f" % (casa, ex, ey, dx, dy))
+
+    def al_lienzo(p):
+        p = cv2.resize(p, None, fx=ex, fy=ey, interpolation=cv2.INTER_AREA)
+        M = np.float32([[1, 0, dx], [0, 1, dy]])
+        return cv2.warpAffine(p, M, (ancho, alto), flags=cv2.INTER_LINEAR)
+    ql = al_lienzo(quieto)
+    qa = ql[..., 3]
+    qc = (ql[..., :3] / np.maximum(qa[..., None], 1e-3)).clip(0, 255).astype(np.uint8)
+    las_dos = rig & (qa > 0.8)
+    lv = cv2.cvtColor(v[..., :3], cv2.COLOR_BGR2LAB).astype(np.float32)
+    ll = cv2.cvtColor(qc, cv2.COLOR_BGR2LAB).astype(np.float32)
+    lab_mul = [lv[..., c][las_dos].std() / max(ll[..., c][las_dos].std(), 1e-3) for c in range(3)]
+    lab_add = [lv[..., c][las_dos].mean() - ll[..., c][las_dos].mean() * lab_mul[c] for c in range(3)]
+    corte = CORTE - oy
+    # la linea del agua en el video limpio (para lo que salpica el remo)
+    agua_limpio = int((corte - dy) / ey)
+
+    lienzos = []
+    salpica = []
+    remo_x = []
+    largo = a1 - a0
+    dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+
+    def gris8(p):
+        return cv2.cvtColor(np.clip(p[..., :3], 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY)
+
+    def llevar(p, fl, t):
+        return cv2.remap(p, xx - t * fl[..., 0], yy - t * fl[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    for i in range(a0, a1):
+        p = quietos[i]
+        # el cierre: los ultimos, cada vez mas como los de antes del principio; los
+        # dos llevados antes a medio camino por su movimiento (flujo optico), que
+        # mezclados sin mas se veian dos remos
+        k = i - (a1 - CICLO_FUNDE)
+        if k >= 0:
+            t = (k + 1) / (CICLO_FUNDE + 1.0)
+            q = quietos[i - largo]
+            ida = dis.calc(gris8(p), gris8(q), None)
+            vuelta = dis.calc(gris8(q), gris8(p), None)
+            p = llevar(p, ida, t) * (1 - t) + llevar(q, vuelta, 1 - t) * t
+        m = movil[..., None]
+        p = quieto * (1 - m) + p * m
+        # el remo en el agua: lo que se mueve por debajo de la linea del agua
+        bajo = p[agua_limpio:, :, 3] * movil[agua_limpio:]
+        salpica.append(float(bajo.sum()))
+        xs = np.nonzero(bajo > 0.5)[1]
+        remo_x.append(float(xs.mean()) if len(xs) else -1.0)
+        p = al_lienzo(p)[:corte]
+        a = p[..., 3]
+        c = (p[..., :3] / np.maximum(a[..., None], 1e-3)).clip(0, 255).astype(np.uint8)
+        lc = cv2.cvtColor(c, cv2.COLOR_BGR2LAB).astype(np.float32)
+        for ch in range(3):
+            lc[..., ch] = lc[..., ch] * lab_mul[ch] + lab_add[ch]
+        c = cv2.cvtColor(lc.clip(0, 255).astype(np.uint8), cv2.COLOR_LAB2BGR)
+        c = igualar(c, RELEVO, tramos)
+        lienzos.append(np.dstack([c.astype(np.float32), a * 255]))
+    # la pose del relevo: la que mas se parece al remero de antes en el relevo
+    # (y su paso siguiente al de antes, que va hacia atras)
+    def zona_gris(rgba):
+        g = cv2.cvtColor(np.clip(rgba[..., :3], 0, 255).astype(np.uint8), cv2.COLOR_BGR2GRAY).astype(np.float32)
+        g *= rgba[..., 3] / 255.0
+        z = np.zeros_like(g)
+        for x0_, x1_, y0_, y1_ in ZONAS_REMO:
+            z[max(0, y0_ - oy):y1_ - oy, x0_ - ox:x1_ - ox] = 1
+        return cv2.GaussianBlur(g, (0, 0), 2) * z[:g.shape[0]]
+    viejos = [leer(os.path.join(carpeta, os.path.basename(r)), cv2.IMREAD_UNCHANGED).astype(np.float32)
+              for r in antes["fotogramas"][-2:]]
+    vz = [zona_gris(x) for x in viejos]
+    nz = [zona_gris(x) for x in lienzos]
+    dif = [np.abs(nz[i] - vz[1]).mean() + np.abs(nz[(i + 1) % largo] - vz[0]).mean() for i in range(largo)]
+    inicio = int(np.argmin(dif))
+    print("remo limpio: empieza en el %d (diferencia %.2f, la peor %.2f)" % (inicio, min(dif), max(dif)))
+    rutas = []
+    for i, rgba in enumerate(lienzos):
+        nombre = "%02d.png" % i
+        guardar(os.path.join(carpeta, nombre), reducir(rgba))
+        rutas.append(RES + "barco/" + nombre)
+    s = np.array(salpica)
+    s = np.clip((s - np.percentile(s, 30)) / max(s.max() - np.percentile(s, 30), 1e-3), 0, 1)
+    xr = [x for x, k in zip(remo_x, s) if k > 0.5 and x >= 0]
+    rx = (np.mean(xr) * ex + dx) if xr else ESPUMA_X["remo"] - ox
+    datos = dict(antes)
+    datos["antes"] = antes["fotogramas"]
+    datos["fotogramas"] = rutas
+    datos["ciclo"] = True
+    datos["inicio"] = inicio
+    datos["espuma"] = {**antes["espuma"], "remo": round(rx * REDUCE, 2),
+                       "salpica": [round(float(x), 3) for x in s]}
+    return datos
+
+
+def todo_el_barco(ult, tramos):
+    """barco() y, si esta el video del remo limpio, el suyo encima."""
+    carpeta = os.path.join(DESTINO, "barco")
+    datos = barco(carpeta, ult, tramos)
+    if os.path.exists(REMO_LIMPIO):
+        datos = remo_limpio(carpeta, tramos, datos)
+    return datos
+
+
+def reducir(rgba):
+    """A la escala del video del juego (premultiplicado: sin orla oscura)."""
+    rgba = rgba.astype(np.float32)
+    rgba[..., :3] *= rgba[..., 3:] / 255.0
+    r = cv2.resize(rgba, None, fx=REDUCE, fy=REDUCE, interpolation=cv2.INTER_AREA)
+    ar = np.maximum(r[..., 3:] / 255.0, 1e-6)
+    r[..., :3] = np.where(r[..., 3:] > 0.5, r[..., :3] / ar, 0)
+    return np.clip(r, 0, 255).astype(np.uint8)
 
 
 # ---- los canticos (2026-10-29, el usuario: "de fondo, que se escuchen poco
@@ -781,8 +1017,11 @@ def main():
         return
     if "--barco" in sys.argv:
         # (solo el barco suelto: sin el video ni la orilla; templo.json no cambia)
+        # (solo cambia su parte de templo.json)
         ultimo = leer(os.path.join(ORIGEN, "ultimo.png"))
-        barco(os.path.join(DESTINO, "barco"), ultimo, medir_tramos())
+        datos = json.load(open(os.path.join(DESTINO, "templo.json"), encoding="utf-8"))
+        datos["barco"] = todo_el_barco(ultimo, medir_tramos())
+        json.dump(datos, open(os.path.join(DESTINO, "templo.json"), "w", encoding="utf-8"), indent=1)
         return
     vista = sys.argv[sys.argv.index("--vista") + 1] if "--vista" in sys.argv else None
     os.makedirs(DESTINO, exist_ok=True)
@@ -811,7 +1050,7 @@ def main():
     guardar(os.path.join(DESTINO, "ultimo.png"), recortar(igualar(ultimo, TRAMOS[-1][1] - 1, tramos)))
     video(os.path.join(DESTINO, "secuencia.ogv"), ultimo, tramos)
     cantos(os.path.join(DESTINO, "cantos.ogg"))
-    datos_barco = barco(os.path.join(DESTINO, "barco"), ultimo, tramos)
+    datos_barco = todo_el_barco(ultimo, tramos)
     mascaras_mueve(DESTINO)
     # en el juego: px de la orilla -> coordenadas de su capa
     datos = {
