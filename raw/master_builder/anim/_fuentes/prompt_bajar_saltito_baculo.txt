@@ -1,0 +1,98 @@
+PROMPT PARA BAJAR DE UN MURO DE UN SALTITO CON EL BACULO EN LA MANO
+(Google Flow / Veo 3.1, "Frames to Video", 2026-10-31; 9:16)
+===================================================================
+Por que: el mismo saltito que prompt_bajar_saltando.txt (v2, el que paso el
+filtro de Flow y es la animacion "bajar"), pero con el baculo en la mano. Es
+para las bajadas de 183 a 492 px del juego (el muro de la referencia, ~360).
+Lo importante para el juego: que haya un MOMENTO EN EL AIRE CLARO, con los dos
+pies despegados y una pose quieta (rodillas algo recogidas, tunica levantada):
+ese tramo se alarga o se acorta segun la altura que haya. Si baja de un tiron
+sin ese momento, no se puede adaptar sin que se vea a saltos.
+
+OJO con el filtro de Flow (ver prompt_bajar_saltando.txt): sin "old", "edge",
+"high", "drops", "falls", "impact" ni "thud"; contado como movimiento de juego de
+plataformas, suave y a salvo. Si lo bloquea, quitar tambien "hops".
+
+En Flow, modo fotogramas a video, EN VERTICAL (9:16):
+  - fotograma inicial: referencia_saltito_baculo_inicio.png (el reposo con el
+    baston en la mano encima del muro, la punta del baston junto al filo)
+  - fotograma final:   referencia_saltito_baculo_fin.png    (el mismo reposo
+    abajo, donde cae con el saltito)
+  (las hace referencias_bajar_baculo.py, aqui al lado; 1080x1920, croma #24D732,
+  sprite de master 1:1, suelo en y=1880; el muro es el de bajar de un saltito)
+  - 9:16, 1080p, 8 s, con audio. Sacar 3-4 tomas.
+
+Que mirar en cada toma, por orden:
+  1. de perfil todo el rato, mirando a la derecha
+  2. el baculo SIEMPRE en la mano de delante, sin soltarlo ni cambiarlo de
+     mano; la garra VACIA (sin bola ni luz); no se clava ni se apoya al saltar
+  3. un saltito hacia delante: no un salto grande hacia arriba, ni se descuelga
+  4. en el aire, un momento claro con los dos pies despegados
+  5. la bajada a velocidad real (~0,6 s), sin flotar ni camara lenta
+  6. aterriza a la altura de la base del muro con las rodillas dobladas, la mano
+     LIBRE toca un momento el suelo y la punta del baculo apoya a la vez; sin
+     rebotar ni caerse
+  7. se levanta y queda quieto como el ultimo fotograma
+  8. capucha blanda (sin pico); pies vestidos con zapatos oscuros, normales
+  9. camara quieta, el muro no se mueve; nada encima: si sale, pedir otra toma
+
+EL PROMPT
+---------
+
+Vertical frame. Locked-off static camera, no camera movement at all: no pan, no
+tilt, no zoom, no dolly, no cuts. The camera does not follow him: he moves
+inside the frame. Flat pure chroma-key green background (#24D732) filling the
+whole frame, no shadows, no cast shadow on the ground, no floor line, no other
+props, no text, no logos, no on-screen interface or player controls. The
+pilgrim stays full-body in frame, always the same size.
+
+A classic move from a 2D platform video game: the character hops down from a
+stone platform to the ground beside it, carrying his staff, and lands softly
+and safely on his feet.
+
+2D side view. The hooded pilgrim from the first frame stays in strict side
+profile facing RIGHT for the whole video: he never turns his body or his head
+towards the camera and never shows his back. His head is covered by the soft
+grey cloth hood of his cloak, exactly the shape of the first frame: a loose,
+floppy cloth hood that follows the shape of his head, part of the cloak, with a
+low rounded top that falls slightly back. It is NOT a pointed wizard hat: no
+tall point, no cone, no stiff peak sticking up; it never grows, stiffens or
+stands up; its deep shadow hides most of his face. Long white beard, long brown
+faceted patchwork cloak in dark maroon, brick red, ochre, warm brown and muted
+grey. His legs and feet are dressed: thin legs in dark hose and soft dark
+leather shoes that cover his whole feet, one single very dark brown from the hem
+of the cloak down to the tips of his shoes. His feet are normal, small,
+human-sized and in proportion with his body, always inside those dark shoes:
+the shoes never come off, never turn into skin or toes and never grow bigger.
+
+He holds the long wooden walking staff upright in his front hand exactly as in
+the first frame, for the whole video: he never lets go of it, never passes it
+to the other hand and never drops it. Its top is an open claw of curled root
+fingers, EMPTY: no orb, no ball, no gem, no glow, no light. His other hand is
+free.
+
+He stands on top of the platform of pale stone blocks from the first frame,
+near its right side. To the right of the platform, level with its base, is the
+ground. The platform never moves and never changes.
+
+Action, one continuous take, at natural real-time speed, no slow motion:
+- 0 to 0.5 s: he stands still exactly as in the first frame.
+- 0.5 to 1 s: he lifts the staff off the platform, holding it upright, and
+  bends his knees, getting ready.
+- 1 to 1.8 s: he hops lightly forward off the platform. For a brief moment he
+  is clearly in the air with both feet off the ground, knees slightly tucked,
+  his cloak lifting, the staff held upright beside him and his free arm a
+  little out for balance; then he comes down to the ground beside the platform
+  in about half a second.
+- 1.8 to 2.2 s: he lands softly on both feet on the ground, level with the base
+  of the platform, his knees bending to cushion the landing; his free hand
+  briefly touches the ground and the tip of the staff touches the ground at the
+  same moment, steadying him. He stays steady and balanced.
+- 2.2 to 3.2 s: he rises smoothly from the crouch, the staff in his hand.
+- 3.2 to 8 s: he stands calmly on the ground, exactly as in the last frame.
+
+Same low-poly flat-shaded hand-painted style, colours and lighting as the first
+frame for both the pilgrim and the platform, crisp frames with no motion blur,
+soft matte texture, no flicker. Sound: the rustle of the cloak, the soft landing
+of his feet, the light knock of the staff on the ground and a short breath; no
+music, no words.

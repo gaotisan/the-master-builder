@@ -1,0 +1,89 @@
+PROMPT PARA BAJAR UN ESCALON CON EL BACULO EN LA MANO
+(Google Flow / Veo 3.1, "Frames to Video", 2026-10-31; 16:9)
+=====================================================
+Por que: con el baculo en la mano el peregrino solo anda y se para en los
+filos. Regla nueva (propuesta): con el en la mano BAJA pero no sube. Este video
+es para los escalones de 53 a 182 px del juego: llega al filo, se para y baja con
+cuidado, el baculo en la mano. El escalon de la referencia mide ~125 del juego
+(en medio); en el juego se ajusta lo que baja a la altura que haya (la "s" de
+cada fotograma, como en bajar), por eso el baculo no apoya en nada MIENTRAS baja:
+solo arriba antes y abajo despues.
+
+En Flow, modo fotogramas a video, EN HORIZONTAL (16:9):
+  - fotograma inicial: referencia_escalon_baculo_inicio.png (el reposo con el
+    baston en la mano, encima del escalon, la punta del baston junto al filo)
+  - fotograma final:   referencia_escalon_baculo_fin.png    (el mismo reposo
+    abajo, un paso mas alla del pie del escalon)
+  (las hace referencias_bajar_baculo.py, aqui al lado; 1920x1080, croma #24D732,
+  sprite de master 1:1, suelo en y=1040)
+  - 16:9, 1080p, 8 s, con audio. Sacar 3-4 tomas.
+
+Que mirar en cada toma, por orden:
+  1. de perfil todo el rato, mirando a la derecha
+  2. el baculo SIEMPRE en la mano de delante, de pie, sin soltarlo ni cambiarlo
+     de mano; la garra de arriba VACIA (sin bola ni luz)
+  3. baja con un paso tranquilo de viejo, un pie y luego el otro, sin brincar;
+     mientras baja el baculo va en el aire con el, y su punta vuelve a tocar el
+     suelo de abajo cuando ya tiene los dos pies abajo
+  4. el movimiento entero en ~1,5 s, a velocidad real (no lo pidas lento: no se
+     puede acelerar)
+  5. acaba quieto como el ultimo fotograma
+  6. capucha blanda como la del primer fotograma (sin pico); pies vestidos con
+     zapatos oscuros, normales, sin dedos ni piel
+  7. camara quieta, el escalon no se mueve; nada encima (controles, marcas de
+     agua, texto): si sale, pedir otra toma pronto
+
+EL PROMPT
+---------
+
+Locked-off static camera, no camera movement at all: no pan, no tilt, no zoom,
+no dolly, no cuts. The camera does not follow him: he moves inside the frame.
+Flat pure chroma-key green background (#24D732) filling the whole frame, no
+shadows, no cast shadow on the ground, no floor line, no other props, no text,
+no logos, no on-screen interface or player controls. The pilgrim stays
+full-body in frame, always the same size.
+
+A classic move from a 2D platform video game: the character calmly steps down
+from a low stone step to the ground beside it, carrying his staff.
+
+2D side view. The hooded pilgrim from the first frame stays in strict side
+profile facing RIGHT for the whole video: he never turns his body or his head
+towards the camera and never shows his back. His head is covered by the soft
+grey cloth hood of his cloak, exactly the shape of the first frame: a loose,
+floppy cloth hood that follows the shape of his head, part of the cloak, with a
+low rounded top that falls slightly back. It is NOT a pointed wizard hat: no
+tall point, no cone, no stiff peak sticking up; it never grows, stiffens or
+stands up; its deep shadow hides most of his face. Long white beard, long brown
+faceted patchwork cloak in dark maroon, brick red, ochre, warm brown and muted
+grey. His legs and feet are dressed: thin legs in dark hose and soft dark
+leather shoes that cover his whole feet, one single very dark brown from the hem
+of the cloak down to the tips of his shoes. His feet are normal, small,
+human-sized and in proportion with his body, always inside those dark shoes:
+the shoes never come off, never turn into skin or toes and never grow bigger.
+
+He holds the long wooden walking staff upright in his front hand exactly as in
+the first frame, for the whole video: he never lets go of it, never passes it
+to the other hand and never drops it. Its top is an open claw of curled root
+fingers, EMPTY: no orb, no ball, no gem, no glow, no light. His other hand hangs
+relaxed at his side.
+
+He stands on top of the low step of pale stone blocks from the first frame,
+near its right side. To the right of the step, level with its base, is the
+ground. The step never moves and never changes.
+
+Action, one continuous take, at natural real-time speed, no slow motion, with
+the careful, calm movements of a tired old traveller:
+- 0 to 0.5 s: he stands still exactly as in the first frame.
+- 0.5 to 2 s: he lifts the staff a little off the step and, holding it upright,
+  steps forward and down with his front foot onto the ground beside the step,
+  then brings his back foot down next to it, his knees bending softly to
+  cushion each step; the staff comes down with him in his hand and does not
+  touch anything while he steps down. As his second foot reaches the ground he
+  sets the tip of the staff on the ground in front of him.
+- 2 to 8 s: he stands calmly on the ground, still and balanced, exactly as in
+  the last frame.
+
+Same low-poly flat-shaded hand-painted style, colours and lighting as the first
+frame for both the pilgrim and the step, crisp frames with no motion blur, soft
+matte texture, no flicker. Sound: the rustle of the cloak, two soft footsteps
+and the light knock of the staff on the ground; no music, no words.
