@@ -1,0 +1,22 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/dev/egipto_acto1.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_bot.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_templo_fotos.gd" id="3"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_losa_traza.gd" id="4"]
+
+[node name="EgiptoLosaBot" instance=ExtResource("1")]
+caida_inicio = false
+templo_visto = true
+
+[node name="Altar" type="Node" parent="."]
+script = ExtResource("3")
+tiempos = []
+
+[node name="Traza" type="Node" parent="."]
+script = ExtResource("4")
+
+[node name="Bot" type="Node" parent="."]
+script = ExtResource("2")
+traza = 0.0
+pasos = [["der"], ["espera", 0.08], ["suelta"], ["quieto"], ["espera", 2.6], ["der"], ["espera", 16.0], ["fin"]]

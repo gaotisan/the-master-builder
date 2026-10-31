@@ -47,35 +47,130 @@ CAJAS = {
         [0, 240, 725, None],        # la base de la izquierda (el plinto; 15 mas arriba, retoque_templo.py)
         [240, 1160, 765, None],     # la pasarela
         [1160, 1744, 725, None],    # la base de la derecha
-        [450, 570, 690, None],      # S3: el bloque bajo
-        [565, 772, 640, None],      # S4: el bloque de encima (hasta su borde: se pasa por delante del pilar alto)
+        # S3: el bloque bajo (2026-10-30: 38 mas abajo, retoque_templo.py: debajo
+        # del puente no cabia de pie y trepaba al puente a traves de el)
+        [450, 570, 728, None],
+        # S4: el bloque de encima (hasta su borde: se pasa por delante del pilar
+        # alto). 16 mas arriba (2026-10-31, retoque_templo.py SUBIDAS_TRAS): del
+        # bloque bajo se trepa (187, ya no se salta: la primera trepada, obligada)
+        # y de su filo izquierdo se trepa al puente (187): lo que se ve. Su cara
+        # izquierda en 564 (sin el remate de antes, que quedaba suelto bajo el
+        # final del puente: retoque_templo.py CIELOS_TRAS y ESTIRADOS_TRAS)
+        [564, 775, 624, None],
         # S2: el puente, la losa entera (2026-10-28, el usuario: estaba corto por
         # los dos lados): hasta su final a la derecha, y a la izquierda hasta el
         # remate del pilar (170; mas alla la losa se mete bajo el remate: si se
         # aterrizaba ahi al trepar, el remate estorbaba). De la base de la
         # izquierda se trepa al puente; del puente, al pilar
         # (2026-10-29: 33 mas arriba, retoque_templo.py)
-        [170, 538, 520, 552],
+        # Se sube desde el filo izquierdo del bloque de encima (trepada mediana:
+        # la rendija entre los dos, 49 px, no es un borde; acciones_egipto.gd
+        # _nivel). (2026-10-31: de un dia se subio por su canto derecho desde el
+        # bloque bajo, como ARISTA; el usuario: "no es nada intuitivo")
+        # Y se baja por el mismo sitio (2026-10-31, el usuario: "subo de c004 a
+        # c005 y luego no puedo bajar"): andando hacia el filo derecho, el saltito
+        # de bajar al bloque de encima (bajada; acciones_egipto.gd _bajada_en)
+        [170, 538, 520, 552, {"bajada": 1}],
         # S1: lo alto del pilar de la izquierda (se pasa por delante del fuste:
         # si no, tapaba la entrada)
         [5, 170, 465, 500],
-        [500, 750, 430, 462],       # S5: la losa sobre las columnas
+        # S5: la losa sobre las columnas, hasta donde nace el fuste del pilar
+        # alto (722; la losa sigue por delante hasta 750). Su punta izquierda va
+        # corrida 57 (retoque_templo.py CORRIDOS), a ras de su capitel, para dejar
+        # libre el extremo del puente (la rendija de 538 a 556 entre los dos no es
+        # un borde por el que caer: acciones_egipto.gd _nivel). Se sube del puente
+        # (mediana o salto). Por debajo, sobre el bloque de encima (ya subido),
+        # quedan 292: se pasa por delante (su columna esta detras del bloque),
+        # la capucha roza su canto de abajo (despeje 290, no 310). Su canto derecho ya no
+        # se trepa desde el bloque de encima (2026-10-30 a 31; el usuario: "por
+        # ahi en teoria no debe poder escalar": es la cara del pilar alto)
+        [556, 722, 430, 462, {"despeje": 290}],
         # S6: lo alto del pilar alto (su remate); el fuste no estorba: por el
         # bloque de encima se pasa por delante (2026-10-28, el usuario: el bloque
         # se quedaba corto por la derecha)
         [712, 842, 334, 377],       # (23 mas arriba, retoque_templo.py)
         [805, 920, 285, 315],       # S8: la repisa suelta (10 mas abajo, retoque_templo.py)
-        [905, 1140, 247, 280],      # S9: la repisa grande
+        # S9: la repisa grande. Por debajo, en la punta del saliente alto (abajo),
+        # se le deja rozar la capucha (254)
+        [905, 1140, 247, 280, {"despeje": 250}],
         [1037, 1100, 200, 247],     # S13: el escalon
         [1100, 1268, 165, 247],     # S12: el bloque de arriba
         [1245, 1744, 245, 280],     # S14: la terraza de los obeliscos
-        [1408, 1632, 74, 245],      # el altar (lo mas alto: el mirador; 38 mas arriba, retoque_templo.py)
+        # el altar (lo mas alto: el mirador). Con su altura de la imagen
+        # (2026-10-30, el usuario: sin la cornisa repetida, "lo suyo es tener
+        # solo un friso"): se sube desde la base de los obeliscos
+        # Desde su esquina de delante (1448; 2026-10-31): lo de la izquierda es su
+        # cara de un lado, en sombra (se ve de lado), y alli va el peldano, pegado
+        [1448, 1632, 112, 245],
+        # (lo de 2026-10-30, al final: los nombres de lo de antes no cambian)
+        # EL BLOQUE GEMELO a la derecha del bloque de encima (retoque_templo.py):
+        # el camino de vuelta, de la pasarela al bloque de encima
+        [772, 890, 728, None],
+        # LAS BASES DE LOS OBELISCOS: eran el escalon (dos peldanitos dibujados)
+        # entre la terraza y el altar. Ya no se pisan, son fondo (2026-10-31, el
+        # usuario: "queda raro que se pueda subir, lo veo mas como background"):
+        # al altar se sube por el peldano de delante (kit_arenisca_14). Se
+        # quedan en la lista (con "fondo") para no cambiar los nombres de las
+        # demas
+        [1312, 1408, 210, 245, {"fondo": True}],
+        [1632, 1708, 210, 245, {"fondo": True}],
+        # LOS TRES SALIENTES de encima de la pasarela, junto al bloque gemelo
+        # (2026-10-31, el usuario: "quiero que se puedan usar tb aunque no lleven a
+        # ningun sitio"). Con "al_final": sus nombres, despues de los de todas las
+        # piezas (los de antes no cambian). Se sube al del medio desde el bloque
+        # gemelo (la alta, saltando junto a su canto izquierdo: arista); de el se
+        # baja al de abajo; del de abajo, al del medio de un salto o al alto con la
+        # alta (retoque_templo.py lo sube 13); del alto se baja a la base de la
+        # derecha. No llevan a la terraza: entre el alto y ella quedan 38, mas que
+        # una rendija.
+        #   el del medio, desde donde acaba el remate del pilar alto, que le queda
+        #   encima (842). De el no se trepa al remate (313, la alta): era un atajo
+        #   que se saltaba media subida (sin_trepar, acciones_egipto.gd)
+        [842, 1042, 508, 535, {"arista": -1, "sin_trepar": True, "al_final": True}],
+        #   el de abajo, hasta donde empieza el alto (por debajo no cabe de pie); por
+        #   debajo, en la pasarela, se pasa (268: por delante, como ya se pasaba), y
+        #   no es techo para el salto (si no, de la pasarela a la base derecha solo
+        #   se saltaba pegado a ella)
+        [1042, 1102, 588, 616, {"despeje": 250, "sin_techo": True, "al_final": True}],
+        #   el alto, hasta 38 de la terraza
+        [1102, 1216, 421, 448, {"al_final": True}],
     ],
     # LA LOSA DE LA IZQUIERDA (2026-10-28, el usuario: "para evitar que el
     # personaje vaya hacia atras, pon una losa vertical grande"): maciza de
     # arriba abajo, mas alta de lo que se trepa (no se sube ni se salta)
     "kit_pilares_1": [
         [20, 450, 0, None],
+    ],
+    # EL PELDANO DEL ALTAR (2026-10-31, Downloads/segundo puzzle egipto, "Hojas de
+    # sprites de ruinas de arenisca"): el bloque con la losa volada (la mitad de
+    # ancho que la losa con moldura, kit_arenisca_4: el usuario, "muy ancho, que
+    # ocupe la mitad"), por delante de la cara en sombra del altar, con su
+    # cuerpo hasta la esquina de delante (que no se vea nada entre los dos: el
+    # usuario, "se ve algo entre medio", la base del altar); la base del
+    # obelisco queda entera a la vista. (Antes: la
+    # escalerita de dos bloques, "hiper basta"; un bloque suelto, "un pegote"; la
+    # losa con moldura, muy ancha.) De la terraza, un salto (80); de el al altar,
+    # la trepada mediana (160; o un salto andando). Lo que se pisa, hasta la cara
+    # del altar (113 de la pieza: el cuerpo); la cara de arriba, 4 px bajo lo que
+    # asoma
+    "kit_arenisca_14": [
+        [2, 113, 6, 132],
+    ],
+    # LAS RUINAS DE LA DERECHA (2026-10-31, Downloads/segundo puzzle egipto, "Ruinas
+    # de templo"): un muro alto al que solo se llega por la losa que saca el altar
+    # (mecanismo_altar.gd). La columna (la losa se apoya en su capitel), la cornisa
+    # del muro alto y el muro bajo largo hasta el final. El hueco de la puerta del
+    # muro bajo no se alcanza (la columna lo tapa por la izquierda y el muro, 463,
+    # por la derecha): macizo. Desde la arena nada se sube (917 / 463); se baja:
+    # capitel -> cornisa 115, cornisa -> muro bajo 340, muro bajo -> arena 463.
+    # La cara de arriba, 5 px bajo lo que asoma (la luz del canto)
+    "muro_columnas": [
+        # el capitel de la columna (en el se apoya la losa). Su zocalo, el bloque de
+        # la base, sobresale hasta 2: desde la arena se para antes de el (2026-10-31,
+        # el usuario: se quedaba "muy metido")
+        [18, 222, 8, None, {"zocalo": 2}],
+        [222, 640, 78, None],       # la cornisa del muro alto
+        [640, 1890, 285, None],     # el muro bajo largo (con la puerta, macizo)
     ],
 }
 
@@ -89,16 +184,66 @@ CAJAS = {
 # cielo en el monton de arena: tumbado ocupa de -170 a +160 px del peregrino,
 # y la camara no pasa de -800 (si no, quedaba medio cuerpo fuera de pantalla)
 X_TEMPLO = -120.0
+# el peldano del altar: su cara de arriba, 80 sobre la terraza
+ESC_PELDANO = 0.6627
 COLOCADAS = [
     ["templo_terrazas", X_TEMPLO, 1.8, 85.0, False],
     # (despues del templo: las cajas del templo siguen siendo c000-c014)
     ["kit_pilares_1", -1010.0, 1.0, 85.0, False],
+    # el peldano del altar, sobre la terraza (980,6; su pie, 3,5 metido), por
+    # delante de la cara en sombra del altar (que no se vea su base entre los
+    # dos): el canto derecho de su cuerpo (113 de la pieza) en la esquina de
+    # delante del altar (2486,4)
+    ["kit_arenisca_14", 2486.4 - 113 * ESC_PELDANO, ESC_PELDANO, -(980.6 - 3.5 - 3 * ESC_PELDANO), False],
 ]
+
+# EL ALTAR Y LA LOSA (2026-10-31, mecanismo_altar.gd): despues del video, de pie en
+# el altar (c014) baja HUNDIR px y la losa larga sale por la derecha del voladizo
+# de la terraza (c013, su cara de arriba y su grueso: 980,6 y 63) hasta el capitel
+# de la columna de las ruinas; al bajarse del altar vuelve a meterse.
+#   El altar, recortado del templo (px de templo_terrazas.png, la de piezas/): la
+#   losa de arriba y el cuerpo, hasta el peldano corrido de los obeliscos (226; al
+#   bajar se mete detras de el)
+#   Solo baja la tapa (2026-10-31, el usuario: "la parte de arriba ... podria
+#   bajar?"): la losa de arriba, por delante del templo, sobre el cuerpo del
+#   altar (que se queda, con la placa del escarabajo). Antes, el altar entero:
+#   [[1402, 106, 1638, 134], [1406, 134, 1631, 226]]
+ALTAR_RECTS = [[1402, 106, 1638, 134]]
+SOLO_TAPA = True
+HUNDIR = 30.0
+#   La losa: escala para que su grueso (113 px de la pieza) sea el del voladizo;
+#   su cara de arriba (CARA_LOSA px de la pieza) a ras de la terraza; sale de su
+#   canto derecho, con OCULTO px por detras de el (no se ve el corte)
+TERRAZA_X1 = X_TEMPLO + 1744 * 1.8
+TERRAZA_ARRIBA = (837 - 245) * 1.8 - 85.0
+ESC_LOSA = 0.56
+CARA_LOSA = 10.0
+OCULTO_LOSA = 20.0
+#   Las ruinas: a la escala (y hundidas) a la que su capitel queda justo debajo de
+#   la losa; la columna, a HUECO_RUINAS de la terraza (lo que la losa cruza); la
+#   punta de la losa, PUNTA_EN_CAPITEL dentro del capitel (lo que hay que recoger
+#   para que deje de llegar: el tiempo de cruzar)
+ESC_RUINAS = 1.64
+HUECO_RUINAS = 790.0
+PUNTA_EN_CAPITEL = 250.0
+ALTO_RUINAS = 577.0
+HUNDIDA_RUINAS = (ALTO_RUINAS - 8.0) * ESC_RUINAS - (TERRAZA_ARRIBA - (116.0 - CARA_LOSA) * ESC_LOSA) + 4.0
+X_RUINAS = TERRAZA_X1 + HUECO_RUINAS - 18.0 * ESC_RUINAS
+LARGO_LOSA = HUECO_RUINAS + PUNTA_EN_CAPITEL
+COLOCADAS.append(["muro_columnas", X_RUINAS, ESC_RUINAS, HUNDIDA_RUINAS, False])
+
+
+def en_ruinas(x, y):
+    """Un punto de la imagen de las ruinas, en px de la imagen del templo (donde
+    se miden los adornos)."""
+    X = X_RUINAS + x * ESC_RUINAS
+    alto = (ALTO_RUINAS - y) * ESC_RUINAS - HUNDIDA_RUINAS
+    return (X - X_TEMPLO) / 1.8, 837.0 - (alto + 85.0) / 1.8
 
 # Por delante de todo lo del recorrido (z): la losa tapa el monton de arena de
 # la caida, que se mete bajo ella (si no, sus piedras quedaban a los pies del
 # peregrino, "irreal")
-Z = {"kit_pilares_1": 10}
+Z = {"kit_pilares_1": 10, "kit_arenisca_14": 1}
 
 MARCAS = {
     # donde aparece el peregrino: abajo del todo, en la arena, antes del templo
@@ -120,6 +265,10 @@ PAJAROS = [
     [X_TEMPLO + 700.0 * 1.8, 648.0, 1.0],     # en la losa sobre las columnas
     [X_TEMPLO + 1700.0 * 1.8, 981.0, -1.0],   # en la terraza de los obeliscos, dos
     [X_TEMPLO + 1675.0 * 1.8, 981.0, 1.0],
+    # en las ruinas de la derecha: una en la cornisa, dos en el muro bajo
+    [X_RUINAS + 470.0 * ESC_RUINAS, (ALTO_RUINAS - 78.0) * ESC_RUINAS - HUNDIDA_RUINAS, -1.0],
+    [X_RUINAS + 1180.0 * ESC_RUINAS, (ALTO_RUINAS - 285.0) * ESC_RUINAS - HUNDIDA_RUINAS, -1.0],
+    [X_RUINAS + 1215.0 * ESC_RUINAS, (ALTO_RUINAS - 285.0) * ESC_RUINAS - HUNDIDA_RUINAS, 1.0],
 ]
 
 # LA BANDADA DE LA CAIDA (bandada.gd, 2026-10-29): palomas comiendo a la derecha
@@ -136,7 +285,7 @@ BANDADA = {
     ],
     "posaderos": [
         [X_TEMPLO + 360.0 * 1.8, X_TEMPLO + 530.0 * 1.8, 485.6],
-        [X_TEMPLO + 545.0 * 1.8, X_TEMPLO + 665.0 * 1.8, 648.0],
+        [X_TEMPLO + 590.0 * 1.8, X_TEMPLO + 665.0 * 1.8, 648.0],
         [X_TEMPLO + 735.0 * 1.8, X_TEMPLO + 830.0 * 1.8, 820.4],
         [X_TEMPLO + 815.0 * 1.8, X_TEMPLO + 900.0 * 1.8, 909.0],
     ],
@@ -171,7 +320,7 @@ ADORNOS = [
     ["colgantes_b_3", "techo", 252, 549, 0.38, False, 10, {"repisa": 520}],
     ["colgantes_a_2", "techo", 482, 549, 0.53, True, 8, {"repisa": 520}],
     ["colgantes_a_0", "techo", 62, 497, 0.47, False, 8, {"repisa": 465}],
-    ["colgantes_b_0", "techo", 532, 459, 0.53, False, 10, {"repisa": 430}],
+    ["colgantes_b_0", "techo", 577, 459, 0.53, False, 10, {"repisa": 430}],
     ["colgantes_b_1", "techo", 842, 312, 0.5, True, 10, {"repisa": 285}],
     ["colgantes_a_8", "techo", 985, 277, 0.62, False, 8, {"repisa": 247}],
     ["colgantes_b_2", "techo", 1060, 612, 0.5, False, 10, {"repisa": 585}],
@@ -180,7 +329,7 @@ ADORNOS = [
     # matas que nacen en lo alto de las repisas (junto a las enredaderas: que
     # parezca que crece ahi y se descuelga)
     ["plantas_a_0", "pie", 45, 465, 0.32, False, 6, {"detras": True, "hunde": 14}],
-    ["plantas_b_6", "pie", 545, 430, 0.36, True, 6, {"detras": True, "hunde": 16}],
+    ["plantas_b_6", "pie", 590, 430, 0.36, True, 6, {"detras": True, "hunde": 16}],
     ["plantas_b_5", "pie", 668, 430, 0.3, False, 5, {"detras": True, "hunde": 14}],
     ["plantas_a_7", "pie", 800, 334, 0.42, False, 4, {"detras": True, "hunde": 12}],
     ["plantas_a_0", "pie", 940, 247, 0.3, True, 6, {"detras": True, "hunde": 14}],
@@ -202,14 +351,16 @@ ADORNOS = [
     # de la arena de delante (no se ve su pie recto)
     ["arena_dunas_b_0", "pie", 640, ARENA_Y, 1.1, False, 0, {"hunde": 10}],
     ["arena_dunas_a_0", "pie", 1420, ARENA_Y, 1.0, True, 0, {"hunde": 10}],
-    ["arena_dunas_b_3", "pie", 1850, ARENA_Y, 0.7, False, 0, {"hunde": 10}],
+    # (2026-10-31, el usuario: fuera la de 1850, en la esquina de la base de la
+    # derecha: con su canto recto tapaba el escalon)
     ["arena_dunas_b_5", "pie", 1110, ARENA_Y, 0.9, False, 0, {"hunde": 8}],
     # (lo plantado en la arena de la playa, por DELANTE del peregrino: esta a la
     # altura de sus pies o mas cerca; detras, la piedra de jeroglificos le
     # quedaba atravesada por los pies; 2026-10-30, el usuario: "deberian quedar
     # por delante de el")
+    # (2026-10-31, el usuario: fuera la de la esquina de la base de la derecha,
+    # plantas_a_5 en 1748: tapaba el escalon y no se veia que habia que saltar)
     ["plantas_a_0", "pie", 222, ARENA_Y, 0.3, True, 6, {"hunde": 20, "z": DELANTE_PEREGRINO}],
-    ["plantas_a_5", "pie", 1748, ARENA_Y, 0.5, True, 7, {"hunde": 24, "z": DELANTE_PEREGRINO}],
     ["plantas_b_1", "pie", 1885, ARENA_Y, 0.5, False, 5, {"hunde": 24, "z": DELANTE_PEREGRINO}],
     ["atrezzo_a_6", "pie", 2010, ARENA_Y, 0.55, False, 0, {"hunde": 16, "z": DELANTE_PEREGRINO}],
     # LA ESTELA, abajo a la izquierda, al pie de la losa (2026-10-28, el usuario:
@@ -217,7 +368,8 @@ ADORNOS = [
     # "mejor sin plantas"); por delante de la losa (z)
     ["atrezzo_b_3", "pie", -335, ARENA_Y, 1.15, False, 0, {"hunde": 14, "z": 11}],
     # vasijas en la piedra, con su sombra
-    ["atrezzo_a_1", "pie", 818, 768, 0.4, False, 0, {"sombra": True}],
+    # (la de la pasarela, pasado el bloque gemelo: antes estaba donde el)
+    ["atrezzo_a_1", "pie", 905, 768, 0.4, False, 0, {"sombra": True}],
     ["atrezzo_a_3", "pie", 1222, 728, 0.4, False, 0, {"sombra": True}],
     ["atrezzo_a_2", "pie", 1495, 728, 0.38, True, 0, {"sombra": True}],
     # EL ESCARABAJO EN EL FRENTE DEL ALTAR, en lugar del halcon (2026-10-29, el
@@ -229,6 +381,26 @@ ADORNOS = [
     # 0,86 por su frio)
     ["frente_escarabajo", "pie", 1538.5, 221, 0.9, False, 0, {"luz": 0.84}],
 ]
+# LOS DE LAS RUINAS DE LA DERECHA (2026-10-31): medidos en su imagen (en_ruinas los
+# lleva a la del templo). Las dunas que les entierran la base (como al templo: si
+# no, la base corta la arena en recto), una enredadera de la cornisa y otra del
+# muro bajo, matas que asoman por detras de lo alto. [adorno, ancla, x, y, escala,
+# volteado, vaiven, opciones]; "repisa", tambien en px de las ruinas
+ARENA_RUINAS = ALTO_RUINAS - HUNDIDA_RUINAS / ESC_RUINAS
+for n, ancla, x, y, e, flip, vaiven, op in [
+    ["arena_dunas_b_1", "pie", 330, ARENA_RUINAS, 1.0, False, 0, {"hunde": 10}],
+    ["arena_dunas_a_1", "pie", 1050, ARENA_RUINAS, 1.0, True, 0, {"hunde": 10}],
+    ["arena_dunas_b_3", "pie", 1760, ARENA_RUINAS, 0.75, False, 0, {"hunde": 10}],
+    ["colgantes_b_2", "techo", 470, 121, 0.5, False, 10, {"repisa": 76, "luz": 0.9}],
+    ["colgantes_a_8", "techo", 1480, 340, 0.55, True, 8, {"repisa": 283, "luz": 0.9}],
+    ["plantas_b_5", "pie", 330, 78, 0.3, False, 5, {"detras": True, "hunde": 14}],
+    ["plantas_a_7", "pie", 1250, 283, 0.4, True, 4, {"detras": True, "hunde": 12}],
+    ["plantas_a_2", "pie", 1760, 283, 0.3, False, 4, {"detras": True, "hunde": 14}],
+]:
+    xt, yt = en_ruinas(x, y)
+    if "repisa" in op:
+        op = dict(op, repisa=en_ruinas(x, op["repisa"])[1])
+    ADORNOS.append([n, ancla, xt, yt, e, flip, vaiven, op])
 
 
 def _luz_templo():
@@ -315,14 +487,32 @@ DELANTE = [
 def cajas_de(pieza, x, escala, hundida, volteada, tam):
     w, h = tam
     out = []
-    for x0, x1, ya, yb in CAJAS.get(pieza, []):
+    for x0, x1, ya, yb, *op in CAJAS.get(pieza, []):
+        op = op[0] if op else {}
         if volteada:
             x0, x1 = w - x1, w - x0
         arriba = (h - ya) * escala - hundida
         abajo = 0.0 if yb is None else (h - yb) * escala - hundida
-        out.append({"x0": round(x + x0 * escala, 1), "x1": round(x + x1 * escala, 1),
-                    "arriba": round(arriba, 1), "abajo": round(max(abajo, 0.0), 1),
-                    "pieza": pieza})
+        c = {"x0": round(x + x0 * escala, 1), "x1": round(x + x1 * escala, 1),
+             "arriba": round(arriba, 1), "abajo": round(max(abajo, 0.0), 1),
+             "pieza": pieza}
+        if "arista" in op:
+            c["arista"] = -op["arista"] if volteada else op["arista"]
+        if "despeje" in op:
+            c["despeje"] = op["despeje"]
+        if "bajada" in op:
+            c["bajada"] = -op["bajada"] if volteada else op["bajada"]
+        if op.get("fondo"):
+            c["fondo"] = True
+        if "zocalo" in op:
+            c["zocalo"] = round(x + (w - op["zocalo"] if volteada else op["zocalo"]) * escala, 1)
+        if op.get("al_final"):
+            c["al_final"] = True
+        if op.get("sin_trepar"):
+            c["sin_trepar"] = True
+        if op.get("sin_techo"):
+            c["sin_techo"] = True
+        out.append(c)
     return out
 
 
@@ -339,8 +529,12 @@ def main():
         sprites.append({"tex": tex, "x": x, "abajo": -hundida, "escala": escala / f, "z": Z.get(pieza, 0),
                         "flip": volteada, "ancho": round(w * escala, 1), "alto": round(h * escala, 1)})
         cajas += cajas_de(pieza, x, escala, hundida, volteada, (w, h))
+    # (las puestas despues, al final: los nombres de las demas no cambian)
+    cajas = [c for c in cajas if not c.get("al_final")] + [c for c in cajas if c.pop("al_final", False)]
     for i, c in enumerate(cajas):
         c["nombre"] = "c%03d" % i
+    # (las de fondo ya no se pisan, pero cuentan para los nombres de las demas)
+    cajas = [c for c in cajas if not c.pop("fondo", False)]
     marcas = {k: v[0] for k, v in MARCAS.items()}
     pajaros = [{"x": round(x, 1), "h": h, "sentido": s} for x, h, s in PAJAROS]
     tam_ad = json.load(open(os.path.join(ADORNOS_DIR, "adornos.json"), encoding="utf-8"))
@@ -349,13 +543,26 @@ def main():
                 "ancho": tam_ad[n][0] * e, "alto": tam_ad[n][1] * e} for n, x, e, f in DELANTE]
     bandada = {k: [[round(float(v), 1) for v in t] for t in BANDADA[k]] for k in BANDADA}
     datos = {"sprites": sprites, "cajas": cajas, "marcas": marcas, "pajaros": pajaros,
-             "adornos": adornos, "delante": delante, "bandada": bandada}
+             "adornos": adornos, "delante": delante, "bandada": bandada, "mecanismo": mecanismo(tam)}
     json.dump(datos, open(SALIDA, "w", encoding="utf-8"), indent=1)
     print("%d piezas, %d cajas -> %s" % (len(sprites), len(cajas), SALIDA))
     comprobar_trepas(cajas)
     for a in sys.argv[1:]:
         if a.startswith("--ver"):
             ver(datos, a.split("=", 1)[1] if "=" in a else None)
+
+
+def mecanismo(tam):
+    """El altar que se hunde y la losa que sale (mecanismo_altar.gd)."""
+    w, h = tam["templo_terrazas"]
+    return {
+        "altar": "c014", "hundir": HUNDIR, "altar_rects": ALTAR_RECTS, "solo_tapa": SOLO_TAPA,
+        "templo_ancho": w, "templo_alto": h,
+        "losa": {"tex": RES + "losa_larga.png", "escala": ESC_LOSA, "cara_tex": CARA_LOSA,
+                 "x_salida": round(TERRAZA_X1, 1), "oculto": OCULTO_LOSA, "largo": round(LARGO_LOSA, 1),
+                 "arriba": round(TERRAZA_ARRIBA, 1),
+                 "abajo": round(TERRAZA_ARRIBA - (116.0 - CARA_LOSA) * ESC_LOSA, 1)},
+    }
 
 
 # LAS TREPAS (2026-10-29): que cada cara caiga donde casa alguna forma de subir
@@ -365,6 +572,8 @@ def main():
 # Y los escalones de PELDANO a ESCALON_MIN, que no deben existir (andando se ve
 # levitar; de un salto o dejandose caer, un tropiezo): se avisa tambien.
 DESPEJE = 310.0
+ARISTA_MAS = 60.0
+RENDIJA = 52.0          # una rendija mas estrecha que el peregrino no es un borde (acciones_egipto.gd)
 PELDANO = 15.0
 ESCALON_MIN = 60.0
 SALTO = 182.0
@@ -380,15 +589,19 @@ def comprobar_trepas(cajas):
     def nivel(x, pies):
         n = 0.0
         for c in todas:
-            if c["abajo"] < pies + DESPEJE and c["x0"] + 0.01 < x < c["x1"] - 0.01:
+            if c["abajo"] < pies + c.get("despeje", DESPEJE) and c["x0"] + 0.01 < x < c["x1"] - 0.01:
                 n = max(n, c["arriba"])
         return n
 
     caras = set()
     for s in todas:
         for b in todas:
-            if b["arriba"] <= s["arriba"] or b["abajo"] >= s["arriba"] + DESPEJE:
+            if b["arriba"] <= s["arriba"] or b["abajo"] >= s["arriba"] + b.get("despeje", DESPEJE):
                 continue
+            # al otro lado de una rendija (del filo del bloque de encima al puente)
+            for x, d, filo in ((b["x0"], 1, s["x1"]), (b["x1"], -1, s["x0"])):
+                if 0.0 < d * (x - filo) < RENDIJA and abs(nivel(filo - d * 8, s["arriba"]) - s["arriba"]) <= 1:
+                    caras.add((round(x), s["nombre"], b["nombre"] + " (rendija)", round(b["arriba"] - s["arriba"])))
             for x, d in ((b["x0"], 1), (b["x1"], -1)):
                 if not s["x0"] < x - d * 8 < s["x1"]:
                     continue
@@ -397,7 +610,22 @@ def comprobar_trepas(cajas):
                 h = b["arriba"] - s["arriba"]
                 if h > PELDANO:
                     caras.add((round(x), s["nombre"], b["nombre"], round(h)))
+    # LAS ARISTAS: el canto de una repisa que queda por encima de la cabeza, que
+    # se trepa desde fuera (acciones_egipto.gd, ARISTA_MAS)
+    for b in todas:
+        lado = b.get("arista", 0)
+        if not lado:
+            continue
+        x = b["x1"] if lado > 0 else b["x0"]
+        for s in todas:
+            pies = s["arriba"]
+            if not s["x0"] < x + lado * 8 < s["x1"] or abs(nivel(x + lado * 8, pies) - pies) > 1:
+                continue
+            if b["abajo"] < pies + DESPEJE or b["abajo"] >= pies + DESPEJE + ARISTA_MAS:
+                continue
+            caras.add((round(x), s["nombre"], b["nombre"] + " (arista)", round(b["arriba"] - pies)))
     print("trepas:")
+    sin_trepar = {c["nombre"] for c in todas if c.get("sin_trepar")}
     for x, de, a, h in sorted(caras):
         modos = []
         if h < ESCALON_MIN:
@@ -408,6 +636,8 @@ def comprobar_trepas(cajas):
             modos.append("mediana")
         if BANDA_ALTA[0] <= h <= BANDA_ALTA[1]:
             modos.append("alta")
+        if de in sin_trepar:
+            modos = [m for m in modos if m not in ("mediana", "alta")]
         print("  x %6d  %s -> %s  %4d px  %s" % (x, de, a, h, " / ".join(modos) if modos else "NO SE SUBE"))
 
 

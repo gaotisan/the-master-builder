@@ -19,6 +19,26 @@
    "flip": false,
    "ancho": 470.0,
    "alto": 900.0
+  },
+  {
+   "tex": "res://assets/egipto/acto1/piezas/kit_arenisca_14.png",
+   "x": 2411.5149,
+   "abajo": 975.1119,
+   "escala": 0.6627,
+   "z": 1,
+   "flip": false,
+   "ancho": 88.1,
+   "alto": 89.5
+  },
+  {
+   "tex": "res://assets/egipto/acto1/piezas/muro_columnas.png",
+   "x": 3779.6800000000003,
+   "abajo": -15.919999999999845,
+   "escala": 1.64,
+   "z": 0,
+   "flip": false,
+   "ancho": 3117.6,
+   "alto": 946.3
   }
  ],
  "cajas": [
@@ -49,15 +69,15 @@
   {
    "x0": 690.0,
    "x1": 906.0,
-   "arriba": 179.6,
+   "arriba": 111.2,
    "abajo": 0.0,
    "pieza": "templo_terrazas",
    "nombre": "c003"
   },
   {
-   "x0": 897.0,
-   "x1": 1269.6,
-   "arriba": 269.6,
+   "x0": 895.2,
+   "x1": 1275.0,
+   "arriba": 298.4,
    "abajo": 0.0,
    "pieza": "templo_terrazas",
    "nombre": "c004"
@@ -68,6 +88,7 @@
    "arriba": 485.6,
    "abajo": 428.0,
    "pieza": "templo_terrazas",
+   "bajada": 1,
    "nombre": "c005"
   },
   {
@@ -79,11 +100,12 @@
    "nombre": "c006"
   },
   {
-   "x0": 780.0,
-   "x1": 1230.0,
+   "x0": 880.8,
+   "x1": 1179.6,
    "arriba": 647.6,
    "abajo": 590.0,
    "pieza": "templo_terrazas",
+   "despeje": 290,
    "nombre": "c007"
   },
   {
@@ -108,6 +130,7 @@
    "arriba": 977.0,
    "abajo": 917.6,
    "pieza": "templo_terrazas",
+   "despeje": 250,
    "nombre": "c010"
   },
   {
@@ -135,12 +158,20 @@
    "nombre": "c013"
   },
   {
-   "x0": 2414.4,
+   "x0": 2486.4,
    "x1": 2817.6,
-   "arriba": 1288.4,
+   "arriba": 1220.0,
    "abajo": 980.6,
    "pieza": "templo_terrazas",
    "nombre": "c014"
+  },
+  {
+   "x0": 1269.6,
+   "x1": 1482.0,
+   "arriba": 111.2,
+   "abajo": 0.0,
+   "pieza": "templo_terrazas",
+   "nombre": "c015"
   },
   {
    "x0": -990.0,
@@ -148,7 +179,68 @@
    "arriba": 815.0,
    "abajo": 0.0,
    "pieza": "kit_pilares_1",
-   "nombre": "c015"
+   "nombre": "c018"
+  },
+  {
+   "x0": 2412.8,
+   "x1": 2486.4,
+   "arriba": 1060.6,
+   "abajo": 977.1,
+   "pieza": "kit_arenisca_14",
+   "nombre": "c019"
+  },
+  {
+   "x0": 3809.2,
+   "x1": 4143.8,
+   "arriba": 917.2,
+   "abajo": 0.0,
+   "pieza": "muro_columnas",
+   "zocalo": 3783.0,
+   "nombre": "c020"
+  },
+  {
+   "x0": 4143.8,
+   "x1": 4829.3,
+   "arriba": 802.4,
+   "abajo": 0.0,
+   "pieza": "muro_columnas",
+   "nombre": "c021"
+  },
+  {
+   "x0": 4829.3,
+   "x1": 6879.3,
+   "arriba": 463.0,
+   "abajo": 0.0,
+   "pieza": "muro_columnas",
+   "nombre": "c022"
+  },
+  {
+   "x0": 1395.6,
+   "x1": 1755.6,
+   "arriba": 507.2,
+   "abajo": 458.6,
+   "pieza": "templo_terrazas",
+   "arista": -1,
+   "sin_trepar": true,
+   "nombre": "c023"
+  },
+  {
+   "x0": 1755.6,
+   "x1": 1863.6,
+   "arriba": 363.2,
+   "abajo": 312.8,
+   "pieza": "templo_terrazas",
+   "despeje": 250,
+   "sin_techo": true,
+   "nombre": "c024"
+  },
+  {
+   "x0": 1863.6,
+   "x1": 2068.8,
+   "arriba": 663.8,
+   "abajo": 615.2,
+   "pieza": "templo_terrazas",
+   "nombre": "c025"
   }
  ],
  "marcas": {
@@ -170,6 +262,21 @@
   {
    "x": 2895.0,
    "h": 981.0,
+   "sentido": 1.0
+  },
+  {
+   "x": 4550.5,
+   "h": 802.44,
+   "sentido": -1.0
+  },
+  {
+   "x": 5714.9,
+   "h": 462.96000000000015,
+   "sentido": -1.0
+  },
+  {
+   "x": 5772.3,
+   "h": 462.96000000000015,
    "sentido": 1.0
   }
  ],
@@ -269,7 +376,7 @@
   },
   {
    "tex": "res://assets/egipto/acto1/adornos/colgantes_b_0.png",
-   "x": 782.2,
+   "x": 863.2,
    "abajo": 226.5,
    "escala": 0.53,
    "flip": false,
@@ -278,13 +385,13 @@
    "ancla": "techo",
    "vaiven": 10,
    "nombre": "colgantes_b_0",
-   "luz": 0.978,
+   "luz": 0.62,
    "detras": false,
    "sombra": false
   },
   {
    "tex": "res://assets/egipto/acto1/adornos/colgantes_b_0_arriba.png",
-   "x": 782.2,
+   "x": 863.2,
    "abajo": 592.7,
    "escala": 0.53,
    "flip": false,
@@ -470,7 +577,7 @@
   },
   {
    "tex": "res://assets/egipto/acto1/adornos/plantas_b_6.png",
-   "x": 796.2,
+   "x": 877.2,
    "abajo": 618.8,
    "escala": 0.36,
    "flip": true,
@@ -649,21 +756,6 @@
    "sombra": false
   },
   {
-   "tex": "res://assets/egipto/acto1/adornos/arena_dunas_b_3.png",
-   "x": 3000.0,
-   "abajo": -18.0,
-   "escala": 0.7,
-   "flip": false,
-   "ancho": 420.0,
-   "alto": 165.2,
-   "ancla": "pie",
-   "vaiven": 0,
-   "nombre": "arena_dunas_b_3",
-   "luz": 1.0,
-   "detras": false,
-   "sombra": false
-  },
-  {
    "tex": "res://assets/egipto/acto1/adornos/arena_dunas_b_5.png",
    "x": 1696.7,
    "abajo": -14.4,
@@ -689,22 +781,6 @@
    "ancla": "pie",
    "vaiven": 6,
    "nombre": "plantas_a_0",
-   "luz": 1.0,
-   "detras": false,
-   "sombra": false,
-   "z": 5
-  },
-  {
-   "tex": "res://assets/egipto/acto1/adornos/plantas_a_5.png",
-   "x": 2943.9,
-   "abajo": -43.2,
-   "escala": 0.5,
-   "flip": true,
-   "ancho": 165.0,
-   "alto": 193.5,
-   "ancla": "pie",
-   "vaiven": 7,
-   "nombre": "plantas_a_5",
    "luz": 1.0,
    "detras": false,
    "sombra": false,
@@ -760,7 +836,7 @@
   },
   {
    "tex": "res://assets/egipto/acto1/adornos/atrezzo_a_1.png",
-   "x": 1311.6,
+   "x": 1468.2,
    "abajo": 39.2,
    "escala": 0.4,
    "flip": false,
@@ -817,6 +893,158 @@
    "luz": 0.84,
    "detras": false,
    "sombra": false
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/arena_dunas_b_1.png",
+   "x": 3769.4,
+   "abajo": -18.0,
+   "escala": 1.0,
+   "flip": false,
+   "ancho": 1103.0,
+   "alto": 128.0,
+   "ancla": "pie",
+   "vaiven": 0,
+   "nombre": "arena_dunas_b_1",
+   "luz": 1.0,
+   "detras": false,
+   "sombra": false
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/arena_dunas_a_1.png",
+   "x": 5037.7,
+   "abajo": -18.0,
+   "escala": 1.0,
+   "flip": true,
+   "ancho": 928.0,
+   "alto": 139.0,
+   "ancla": "pie",
+   "vaiven": 0,
+   "nombre": "arena_dunas_a_1",
+   "luz": 1.0,
+   "detras": false,
+   "sombra": false
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/arena_dunas_b_3.png",
+   "x": 6441.1,
+   "abajo": -18.0,
+   "escala": 0.75,
+   "flip": false,
+   "ancho": 450.0,
+   "alto": 177.0,
+   "ancla": "pie",
+   "vaiven": 0,
+   "nombre": "arena_dunas_b_3",
+   "luz": 1.0,
+   "detras": false,
+   "sombra": false
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/colgantes_b_2.png",
+   "x": 4507.2,
+   "abajo": 458.4,
+   "escala": 0.5,
+   "flip": false,
+   "ancho": 86.5,
+   "alto": 273.5,
+   "ancla": "techo",
+   "vaiven": 10,
+   "nombre": "colgantes_b_2",
+   "luz": 0.9,
+   "detras": false,
+   "sombra": false
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/colgantes_b_2_arriba.png",
+   "x": 4507.2,
+   "abajo": 761.2,
+   "escala": 0.5,
+   "flip": false,
+   "ancho": 86.5,
+   "alto": 50.0,
+   "filas": 100,
+   "ancla": "pie",
+   "vaiven": 4.0,
+   "nombre": "colgantes_b_2_arriba",
+   "luz": 1.0,
+   "detras": true,
+   "sombra": false
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/colgantes_a_8.png",
+   "x": 6148.0,
+   "abajo": 166.5,
+   "escala": 0.55,
+   "flip": true,
+   "ancho": 117.7,
+   "alto": 206.3,
+   "ancla": "techo",
+   "vaiven": 8,
+   "nombre": "colgantes_a_8",
+   "luz": 0.9,
+   "detras": false,
+   "sombra": false
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/colgantes_a_8_arriba.png",
+   "x": 6148.0,
+   "abajo": 423.6,
+   "escala": 0.55,
+   "flip": true,
+   "ancho": 117.7,
+   "alto": 55.0,
+   "filas": 100,
+   "ancla": "pie",
+   "vaiven": 3.2,
+   "nombre": "colgantes_a_8_arriba",
+   "luz": 1.0,
+   "detras": true,
+   "sombra": false
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/plantas_b_5.png",
+   "x": 4265.7,
+   "abajo": 777.2,
+   "escala": 0.3,
+   "flip": false,
+   "ancho": 110.4,
+   "alto": 91.8,
+   "ancla": "pie",
+   "vaiven": 5,
+   "nombre": "plantas_b_5",
+   "luz": 1.0,
+   "detras": true,
+   "sombra": false
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/plantas_a_7.png",
+   "x": 5761.1,
+   "abajo": 444.6,
+   "escala": 0.4,
+   "flip": true,
+   "ancho": 137.2,
+   "alto": 71.6,
+   "ancla": "pie",
+   "vaiven": 4,
+   "nombre": "plantas_a_7",
+   "luz": 1.0,
+   "detras": true,
+   "sombra": false
+  },
+  {
+   "tex": "res://assets/egipto/acto1/adornos/plantas_a_2.png",
+   "x": 6600.2,
+   "abajo": 441.0,
+   "escala": 0.3,
+   "flip": false,
+   "ancho": 131.7,
+   "alto": 68.4,
+   "ancla": "pie",
+   "vaiven": 4,
+   "nombre": "plantas_a_2",
+   "luz": 1.0,
+   "detras": true,
+   "sombra": false
   }
  ],
  "delante": [
@@ -851,7 +1079,7 @@
     485.6
    ],
    [
-    861.0,
+    942.0,
     1077.0,
     648.0
    ],
@@ -866,5 +1094,30 @@
     909.0
    ]
   ]
+ },
+ "mecanismo": {
+  "altar": "c014",
+  "hundir": 30.0,
+  "altar_rects": [
+   [
+    1402,
+    106,
+    1638,
+    134
+   ]
+  ],
+  "solo_tapa": true,
+  "templo_ancho": 1744,
+  "templo_alto": 837,
+  "losa": {
+   "tex": "res://assets/egipto/acto1/piezas/losa_larga.png",
+   "escala": 0.56,
+   "cara_tex": 10.0,
+   "x_salida": 3019.2,
+   "oculto": 20.0,
+   "largo": 1040.0,
+   "arriba": 980.6,
+   "abajo": 921.2
+  }
  }
 }

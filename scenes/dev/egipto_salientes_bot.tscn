@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/dev/egipto_acto1.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_bot.gd" id="2"]
+
+[node name="EgiptoSalientesBot" instance=ExtResource("1")]
+x_prueba = 1330.0
+caida_inicio = false
+
+[node name="Bot" type="Node" parent="."]
+script = ExtResource("2")
+traza = 0.5
+pasos = [["quieto"], ["espera", 0.6], ["der"], ["espera", 0.2], ["salta"], ["espera", 3.5], ["suelta"], ["quieto"], ["der"], ["hasta", 1760], ["suelta"], ["quieto"], ["espera", 0.5], ["der"], ["espera", 0.4], ["salta"], ["espera", 3.5], ["suelta"], ["quieto"], ["der"], ["hasta", 2100], ["suelta"], ["quieto"], ["espera", 0.5], ["fin"]]

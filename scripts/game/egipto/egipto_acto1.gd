@@ -56,6 +56,13 @@ const MUSICA_COMPAS := 5.9230   # los compases de la intro (musica_bucle.py)
 const TEMPLO := "res://assets/egipto/acto1/templo/templo.json"
 var _templo: TemploRio
 var _templo_capa: Array = []      # la entrada de su capa en _tira_capas
+## EL ALTAR QUE SE HUNDE Y LA LOSA QUE SALE (mecanismo_altar.gd, "mecanismo" de
+## recorrido.json): se activa al acabar el video del templo; la primera vez la
+## camara mira como sale la losa hasta las ruinas.
+var _mecanismo: MecanismoAltar
+## Para probar la losa: el video ya visto (el altar funciona desde el principio).
+@export var templo_visto := false
+@export var zoom_losa := 0.5
 ## En lo alto del altar, la camara se va al templo: donde queda en la pantalla
 ## (fraccion del ancho) y el zoom.
 @export var templo_en_pantalla := 0.3
@@ -589,7 +596,7 @@ func _hacer_mirador(x: float) -> void:
 ## En lo alto del altar (la caja mas alta del recorrido en la marca del
 ## mirador), parado: se lanza el video del templo.
 func _templo_si_toca() -> void:
-	if _templo == null or _templo.lanzado or _cine:
+	if _templo == null or _templo.lanzado or _cine or templo_visto:
 		return
 	var mr: Dictionary = _acciones.recorrido.get("marcas", {})
 	if not mr.has("mirador"):
@@ -602,7 +609,10 @@ func _templo_si_toca() -> void:
 	for c in _acciones.recorrido["cajas"]:
 		if x >= float(c["x0"]) and x <= float(c["x1"]):
 			arriba = maxf(arriba, float(c["arriba"]))
-	if p.position.y > float(nivel["suelo"]) - arriba + 20.0:
+	# (con el altar hundido bajo sus pies, lo que haya bajado: la losa sale al
+	# subirse, con o sin video)
+	var hundido: float = float(_acciones.recorrido["mecanismo"]["hundir"]) if _acciones.recorrido.has("mecanismo") else 0.0
+	if p.position.y > float(nivel["suelo"]) - arriba + 20.0 + hundido:
 		return
 	_ver_templo()
 
@@ -622,9 +632,23 @@ func _ver_templo() -> void:
 	await _templo.acabado
 	_musica_tema()
 	await get_tree().create_timer(1.0).timeout
+	if _mecanismo:
+		await _ver_losa()
 	_bandas_objetivo = 0.0
 	_fin_cinematica()
 	_peregrino.control_bloqueado = false
+
+## Al acabar el video: el peregrino se vuelve hacia la derecha, el altar baja
+## bajo sus pies y la camara mira como sale la losa hasta el capitel de las ruinas.
+func _ver_losa() -> void:
+	var x := _peregrino.position.x
+	_peregrino.girar_hacia(x + 100.0)
+	var v := _mecanismo.vista()
+	var suelo := float(nivel["suelo"])
+	_cinematica(Vector2(v.x - 150.0, suelo - _acciones.PLANTA - v.y + 40.0), zoom_losa, 0.7)
+	await get_tree().create_timer(0.6).timeout
+	await _mecanismo.revelar()
+	await get_tree().create_timer(1.0).timeout
 
 ## Donde poner la camara para que el templo (en su capa, con su paralaje) quede
 ## a templo_en_pantalla del ancho; de alto, la del peregrino.
@@ -716,6 +740,28 @@ func _montar_recorrido() -> void:
 		bd.z_index = -2
 		add_child(bd)
 		bd.montar(r["bandada"], suelo - _acciones.PLANTA)
+	# el altar que se hunde y la losa que sale (mecanismo_altar.gd): el altar,
+	# recortado del templo, y la placa del escarabajo bajan juntos
+	if r.has("mecanismo"):
+		var templo: Sprite2D = null
+		for s in n.get_children():
+			if s is Sprite2D and String(s.texture.resource_path).get_file() == "templo_terrazas.png":
+				templo = s
+		var escarabajo: Sprite2D = null
+		for s in get_node("Adornos").get_children():
+			if s is Sprite2D and String(s.texture.resource_path).get_file() == "frente_escarabajo.png":
+				escarabajo = s
+		if templo:
+			_mecanismo = MecanismoAltar.new()
+			_mecanismo.name = "MecanismoAltar"
+			_mecanismo.acciones = _acciones
+			_mecanismo.peregrino = _peregrino
+			_mecanismo.datos = r["mecanismo"]
+			add_child(_mecanismo)
+			_mecanismo.montar(templo, n, escarabajo)
+			# (siempre: la losa sale al subirse al altar, tambien la primera vez,
+			# mientras el video; 2026-10-31, el usuario: "son eventos independientes")
+			_mecanismo.activo = true
 	# F3 ver lo que se pisa, F4 marcar un fallo (marcas_recorrido.gd)
 	var m := MarcasRecorrido.new()
 	m.acciones = _acciones

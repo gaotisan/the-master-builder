@@ -7,8 +7,10 @@ piezas sueltas.
 Salida: assets/egipto/acto1/piezas/<nombre>.png (recortadas a lo que hay) y
 piezas.json con el tamano de cada una. El recorrido (recorrido.py) las coloca.
 
-Uso: python -I tools/egipto/piezas.py [--copiar]
+Uso: python -I tools/egipto/piezas.py [--copiar] [--solo=a,b]
   --copiar: copia antes las imagenes de Downloads/piezas_piedra a raw/.
+  --solo: solo esas (por su nombre corto), sin rehacer las demas (el templo de
+    las terrazas va retocado: retoque_templo.py); piezas.json se completa.
 """
 import json
 import os
@@ -61,6 +63,14 @@ NOMBRES = {
     "Ruinas egipcias bajo el sol cálido.png": "templo_rampa",
     "Ruinas egipcias bajo un sol alado.png": "portico_caido",
     "Templo egipcio de piedra en ruinas.png": "templo_escalinata",
+    # (2026-10-31, Downloads/segundo puzzle egipto: bloques y peldanos sueltos para
+    # ir montando encima; el primero, el peldano del altar)
+    "Hojas de sprites de ruinas de arenisca.png": "kit_arenisca",
+    "Piezas de ruina de arenisca sobre fondo verde.png": "kit_arenisca_grande",
+    "Banco y Muro de Piedra Estilizados.png": "kit_banco_muro",
+    "Plataforma de piedra sobre fondo verde.png": "losa_larga",
+    "Ruinas de piedra sobre fondo verde.png": "voladizo",
+    "Ruinas de templo sobre fondo verde.png": "muro_columnas",
 }
 # (las "(1)" y "-2"/"-3" repetidas son la misma imagen: se usa una)
 
@@ -73,6 +83,14 @@ RECORTE = {"templo_terrazas": (13, 850, 21, 1765)}
 SOMBRA_FRIA = 12.0   # cuanto azul (b de Lab) se llevan las sombras mas hondas
 LUZ_CALIDA = 4.0     # y cuanto amarillo las luces
 LUZ = {"dL": -6.0, "da": -2.0, "db": -6.0, "croma": 0.86, "contraste": 1.08}
+
+# LAS DE LA CARPETA "segundo puzzle egipto" (2026-10-31): mas naranjas y
+# saturadas que el templo; se llevan a su piedra en vez de luz(): la media de
+# L, a y b (Lab) de la caliza del templo junto al altar, y el rojo (a) con la
+# variacion del templo (x0,4). Sin el enfriado de sombras de luz(): sus filos
+# salian azulados (comparadas sobre el templo, tres tonos: esta es la que casa)
+AL_TEMPLO = {"L": 155.0, "a": 137.5, "b": 157.0, "var_a": 0.4}
+DEL_TEMPLO = ("kit_arenisca", "kit_banco_muro", "losa_larga", "voladizo", "muro_columnas")
 
 
 def leer(ruta):
@@ -131,6 +149,17 @@ def luz(bgra):
     return np.dstack([bgr, bgra[..., 3]])
 
 
+def al_templo(bgra):
+    lab = cv2.cvtColor(bgra[..., :3], cv2.COLOR_BGR2LAB).astype(np.float32)
+    sel = bgra[..., 3] > 200
+    m = lab[sel].mean(0) if sel.any() else lab.reshape(-1, 3).mean(0)
+    lab[..., 0] += AL_TEMPLO["L"] - m[0]
+    lab[..., 1] = (lab[..., 1] - m[1]) * AL_TEMPLO["var_a"] + AL_TEMPLO["a"]
+    lab[..., 2] += AL_TEMPLO["b"] - m[2]
+    bgr = cv2.cvtColor(np.clip(lab, 0, 255).astype(np.uint8), cv2.COLOR_LAB2BGR)
+    return np.dstack([bgr, bgra[..., 3]])
+
+
 def recortar(bgra, margen=2):
     ys, xs = np.nonzero(bgra[..., 3] > 8)
     if len(xs) == 0:
@@ -176,12 +205,23 @@ def main():
         for f in NOMBRES:
             shutil.copy2(os.path.join(DESCARGAS, f), os.path.join(ORIGEN, f))
     os.makedirs(DESTINO, exist_ok=True)
+    solo = [a.split("=", 1)[1].split(",") for a in sys.argv[1:] if a.startswith("--solo=")]
+    solo = solo[0] if solo else None
     datos = {}
+    if solo:
+        datos = json.load(open(os.path.join(DESTINO, "piezas.json"), encoding="utf-8"))
     for f, nombre in NOMBRES.items():
-        img = luz(sin_croma(leer(os.path.join(ORIGEN, f))))
+        if solo and nombre not in solo:
+            continue
+        del_templo = nombre.startswith(DEL_TEMPLO)
+        img = sin_croma(leer(os.path.join(ORIGEN, f)))
+        if not del_templo:
+            img = luz(img)
         if nombre.startswith("kit_"):
             for i, p in enumerate(separar(img)):
                 p = recortar(p)
+                if del_templo:
+                    p = al_templo(p)        # (cada pieza por su cuenta: su media, la del templo)
                 n = "%s_%d" % (nombre, i)
                 guardar(os.path.join(DESTINO, n + ".png"), p)
                 datos[n] = [p.shape[1], p.shape[0]]
@@ -191,6 +231,8 @@ def main():
                 p = img[y0:y1, x0:x1]
             else:
                 p = recortar(img)
+            if del_templo:
+                p = al_templo(p)
             guardar(os.path.join(DESTINO, nombre + ".png"), p)
             datos[nombre] = [p.shape[1], p.shape[0]]
         print(nombre)

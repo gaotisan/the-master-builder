@@ -794,6 +794,10 @@ var _caida_alta := false
 ## caida_sin_salto_desde px), con la caida del salto hasta tocar; los escalones
 ## mas bajos, con el saltito de siempre.
 @export var caida_sin_salto_desde := 150.0
+## Siempre sin brinco, tambien corriendo y aunque mas alla vuelva el suelo (el
+## nivel lo pone bajo un techo bajo: el brinco de la carrera metia la capucha
+## en la piedra; Egipto, 2026-10-31).
+var caer_sin_brinco := false
 @export var caida_filo := 4.0
 @export var caida_desde := 18
 ## SALTAR ENCIMA (2026-10-13). El usuario: "los saltos no valen para nada, no
@@ -1321,7 +1325,8 @@ func _physics_process(delta: float) -> void:
 	if _borde_delante(direccion):
 		var mas_alla: float = suelo_en.call(position.x + _mirando * 80.0)
 		var alta := mas_alla - position.y > caida_flotar_desde
-		if mas_alla - position.y > caida_sin_salto_desde and _puede_dejarse_caer(alta) and not _hueco_delante():
+		if (mas_alla - position.y > caida_sin_salto_desde or caer_sin_brinco) and _puede_dejarse_caer(alta) \
+				and (caer_sin_brinco or not _hueco_delante()):
 			# (DEJARSE CAER: sigue andando hasta el filo y alli cae, sin saltito)
 			if float(suelo_en.call(position.x + _mirando * caida_filo)) > position.y + 2.0:
 				# (el nodo, los pies, ya sobre el vacio: si no, el suelo de debajo
@@ -2084,7 +2089,7 @@ func _hueco_delante() -> bool:
 ## DEJARSE CAER: andando (no corriendo) y con la bajada de flotar para "saltar".
 func _puede_dejarse_caer(alta: bool) -> bool:
 	var corre := (_estado == Estado.CORRER or _estado == Estado.ARRANQUE_CORRER) and _velocidad() > velocidad_andar
-	return not corre and (not alta or (_flotar.has("flotar_bajar") and _flotar["_despegue"].has("saltar")))
+	return (not corre or caer_sin_brinco) and (not alta or (_flotar.has("flotar_bajar") and _flotar["_despegue"].has("saltar")))
 
 ## DEJARSE CAER: recien puesto el salto, ya en el aire en el filo, parado en
 ## vertical (sin la subida), y cayendo con la gravedad de siempre por los del
@@ -2115,13 +2120,18 @@ func _bajada() -> float:
 ## para contra ella, mirando por delante del cuerpo, y sigue cayendo), y no pasa
 ## de limites_salto (el vuelo a otro suelo dura mas de lo que mide
 ## _impulso_hasta_limite). Tambien si los pies pasan pero el cuerpo no va a
-## llegar a caer encima (ver _llega_encima).
+## llegar a caer encima (ver _llega_encima). Y en el salto corriendo de arco
+## fijo (sin _encima_corriendo: no apunta a nada), siempre: ese arco toca a la
+## altura del despegue, asi que pasar por encima lo dejaba dentro de la piedra
+## (2026-10-31, Egipto: del filo de la base del obelisco hacia el bloque alto).
 const MEDIO_CUERPO := 28.0
 func _avance_en_el_aire(nx: float) -> float:
 	var delante := _mirando * MEDIO_CUERPO
 	var aqui: float = suelo_en.call(position.x + delante)
 	var alli: float = suelo_en.call(nx + delante)
-	if alli < aqui - 1.0 and not _llega_encima(position.y - alli):
+	# (solo lo mas alto que el despegue: lo de mas abajo si se pasa por encima)
+	var arco_fijo := _sprite.animation == &"salto_correr" and _vuelo == 0 and alli < position.y - 1.0
+	if alli < aqui - 1.0 and (arco_fijo or not _llega_encima(position.y - alli)):
 		nx = position.x
 	return clampf(nx, limites_salto.x, limites_salto.y)
 
@@ -2154,6 +2164,11 @@ func _llega_encima(h: float) -> bool:
 ## SUELO VARIABLE: la primera cara mas alta que el suelo de aqui a menos de
 ## `alcance` px por delante: {x: lo que falta hasta ella, alto: lo que sube,
 ## ancho: lo que dura arriba a esa altura}, o {}.
+	# (corriendo, con caer_sin_brinco: los del salto andando tambien; el
+	# fotograma caida_desde del corriendo es media zancada en el aire, arriba)
+	if _sprite.animation != &"saltar":
+		_corria_al_saltar = false
+		_sprite.play(&"saltar")
 func _cara_delante(alcance: float) -> Dictionary:
 	var dx := 2.0
 	while dx <= alcance:
@@ -2621,6 +2636,14 @@ func tomar_cinematica() -> void:
 	_pisando = false
 	_despega = -1.0
 	_llega = -1.0
+	# Sale del salto sin que la fisica haya tocado (el corriendo acaba por su
+	# fotograma de la toma, y cayendo encima de algo mas alto llegaba a el un
+	# poco antes de tocar): el nodo, al suelo de debajo. Sin esto se quedaba a
+	# la altura del despegue, dentro de la piedra (2026-10-31, Egipto).
+	if _estado == Estado.SALTAR and nuevo != Estado.SALTAR and (_vuelo == 1 or _vuelo == 2) \
+			and not (nuevo in [Estado.CAYENDO, Estado.CAIDA]):
+		_aterrizar_abajo()
+		_vuelo = 3
 	_flota = false
 	_quieto = -1.0
 	_tras_giro = false

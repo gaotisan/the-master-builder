@@ -1,0 +1,12 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/dev/egipto_acto1.tscn" id="1"]
+[ext_resource type="Script" path="res://scripts/dev/egipto_templo_fotos.gd" id="3"]
+
+[node name="EgiptoLosa" instance=ExtResource("1")]
+caida_inicio = false
+templo_visto = true
+
+[node name="Altar" type="Node" parent="."]
+script = ExtResource("3")
+tiempos = []

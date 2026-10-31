@@ -210,5 +210,165 @@
  "templo_escalinata": [
   1766,
   829
+ ],
+ "kit_arenisca_0": [
+  98,
+  97
+ ],
+ "kit_arenisca_1": [
+  178,
+  91
+ ],
+ "kit_arenisca_2": [
+  96,
+  147
+ ],
+ "kit_arenisca_3": [
+  259,
+  51
+ ],
+ "kit_arenisca_4": [
+  214,
+  92
+ ],
+ "kit_arenisca_5": [
+  151,
+  143
+ ],
+ "kit_arenisca_6": [
+  149,
+  143
+ ],
+ "kit_arenisca_7": [
+  199,
+  62
+ ],
+ "kit_arenisca_8": [
+  148,
+  170
+ ],
+ "kit_arenisca_9": [
+  151,
+  170
+ ],
+ "kit_arenisca_10": [
+  161,
+  166
+ ],
+ "kit_arenisca_11": [
+  183,
+  156
+ ],
+ "kit_arenisca_12": [
+  300,
+  150
+ ],
+ "kit_arenisca_13": [
+  250,
+  162
+ ],
+ "kit_arenisca_14": [
+  133,
+  135
+ ],
+ "kit_arenisca_15": [
+  80,
+  175
+ ],
+ "kit_arenisca_16": [
+  131,
+  135
+ ],
+ "kit_arenisca_17": [
+  127,
+  178
+ ],
+ "kit_arenisca_18": [
+  117,
+  170
+ ],
+ "kit_arenisca_19": [
+  117,
+  182
+ ],
+ "kit_arenisca_20": [
+  316,
+  155
+ ],
+ "kit_arenisca_21": [
+  348,
+  165
+ ],
+ "kit_arenisca_22": [
+  115,
+  78
+ ],
+ "kit_arenisca_23": [
+  115,
+  99
+ ],
+ "kit_arenisca_24": [
+  187,
+  94
+ ],
+ "kit_arenisca_25": [
+  365,
+  94
+ ],
+ "kit_arenisca_26": [
+  389,
+  113
+ ],
+ "kit_arenisca_27": [
+  361,
+  250
+ ],
+ "kit_arenisca_28": [
+  104,
+  51
+ ],
+ "kit_arenisca_29": [
+  99,
+  51
+ ],
+ "kit_arenisca_30": [
+  222,
+  54
+ ],
+ "kit_arenisca_31": [
+  349,
+  54
+ ],
+ "kit_arenisca_32": [
+  164,
+  98
+ ],
+ "kit_arenisca_33": [
+  162,
+  100
+ ],
+ "kit_arenisca_grande_0": [
+  277,
+  255
+ ],
+ "kit_arenisca_grande_1": [
+  819,
+  158
+ ],
+ "kit_arenisca_grande_2": [
+  362,
+  431
+ ],
+ "kit_arenisca_grande_3": [
+  830,
+  430
+ ],
+ "losa_larga": [
+  1908,
+  120
+ ],
+ "muro_columnas": [
+  1901,
+  577
  ]
 }

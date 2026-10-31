@@ -15,10 +15,26 @@ uniform float fondo = 0.86;      // la luz de lo que no se pisa
 uniform float filo = 0.12;       // lo que se aviva el filo de arriba
 uniform float filo_uv = 0.006;   // su alto (UV)
 uniform float canto_suave = 0.01; // (UV) la transicion del canto al muro
+// EL ALTAR QUE SE HUNDE (2026-10-31, mecanismo_altar.gd): dos rectangulos (UV:
+// x0, y0, x1, y1) con la silueta del altar; 1 = el templo sin ellos, 2 = solo
+// ellos (el altar recortado, que baja por detras del templo); 0 = nada.
+uniform int hueco_modo = 0;
+uniform vec4 hueco_a;
+uniform vec4 hueco_b;
+
+bool en_rect(vec2 uv, vec4 r) {
+	return uv.x >= r.x && uv.x < r.z && uv.y >= r.y && uv.y < r.w;
+}
 
 void fragment() {
 	// (COLOR ya trae la textura por el modulate: no volver a multiplicarla)
 	vec4 c = COLOR;
+	if (hueco_modo != 0) {
+		bool dentro = en_rect(UV, hueco_a) || en_rect(UV, hueco_b);
+		if (dentro == (hueco_modo == 1)) {
+			c.a = 0.0;
+		}
+	}
 	// (lo transparente de la pieza, sin el bucle de las cajas: no cambia nada y
 	// es mucho del rectangulo del templo; 2026-10-29, rendimiento)
 	if (n_cajas > 0 && c.a > 0.0) {
