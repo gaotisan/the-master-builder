@@ -21,16 +21,6 @@
    "alto": 900.0
   },
   {
-   "tex": "res://assets/egipto/acto1/piezas/kit_arenisca_14.png",
-   "x": 2411.5149,
-   "abajo": 975.1119,
-   "escala": 0.6627,
-   "z": 1,
-   "flip": false,
-   "ancho": 88.1,
-   "alto": 89.5
-  },
-  {
    "tex": "res://assets/egipto/acto1/piezas/muro_columnas.png",
    "x": 3779.6800000000003,
    "abajo": -15.919999999999845,
@@ -158,7 +148,7 @@
    "nombre": "c013"
   },
   {
-   "x0": 2486.4,
+   "x0": 2436.0,
    "x1": 2817.6,
    "arriba": 1220.0,
    "abajo": 980.6,
@@ -174,20 +164,20 @@
    "nombre": "c015"
   },
   {
+   "x0": 2383.8,
+   "x1": 2436.0,
+   "arriba": 1047.2,
+   "abajo": 980.6,
+   "pieza": "templo_terrazas",
+   "nombre": "c016"
+  },
+  {
    "x0": -990.0,
    "x1": -560.0,
    "arriba": 815.0,
    "abajo": 0.0,
    "pieza": "kit_pilares_1",
    "nombre": "c018"
-  },
-  {
-   "x0": 2412.8,
-   "x1": 2486.4,
-   "arriba": 1060.6,
-   "abajo": 977.1,
-   "pieza": "kit_arenisca_14",
-   "nombre": "c019"
   },
   {
    "x0": 3809.2,

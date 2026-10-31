@@ -25,21 +25,30 @@ son px del juego sobre la arena; "x" es donde esta la cara o el borde.
 | c010 | c011 | 1747 | sube 85 | **salto** |
 | c011 | c012 | 1860 | sube 63 | **salto** |
 | c012 | c013 la terraza | 2162 | baja 144 | andando, **se deja caer** |
-| c013 | c019 el peldano del altar | 2413 | sube 80 | **salto** |
-| c019 | c014 el altar | 2486 | sube 159 | **trepada mediana** parado contra el altar (o salto andando: llega justo) |
+| c013 | c016 el peldanito del altar | 2384 | sube 67 | **salto** (andando o de parado contra el) |
+| c016 | c014 el altar | 2436 | sube 173 | **trepada mediana** parado contra el altar (o salto andando: llega justo) |
 
-El peldano es una pieza suelta (`kit_arenisca_14`, el bloque con la losa volada
-de "Hojas de sprites de ruinas de arenisca"; escala `ESC_PELDANO`). El altar se
-ve algo de lado: su cara izquierda, en sombra, y su base de dos peldanos. El
-peldano va por delante de esa cara, con su cuerpo hasta la esquina de delante
-del altar (1448 de la imagen, 2486; desde ahi empieza c014): pegado a el, sin
-que asome la base entre los dos, y con la base del obelisco entera a la vista. No lleva
-a ningun otro sitio: es para que se vea que al altar se puede subir. Las bases de
-los obeliscos no se pisan (son fondo: el usuario "lo veo mas como background").
-(Rechazados: la escalerita de dos bloques `kit_arenisca_32`, "hiper basta", que
-tapaba el obelisco; un bloque suelto `kit_arenisca_23`, "un pegote"; y la losa
-con moldura `kit_arenisca_4`, "muy ancha", con la base del altar asomando entre
-los dos.)
+El peldanito es la piedra con luz pegada al altar (1391-1420 de la imagen; el
+altar se pisa desde 1420, el canto de su costado: con 1408 el peldanito era tan
+estrecho que el salto no caia encima). La base del obelisco de la izquierda, a su
+lado, NO se pisa (el usuario: "se ven como dos piedras, una pegada al altar y otra
+que seria la base del obelisco", que esta "se vea que no se puede subir, de
+fondo"): esta a la sombra (`retoque_templo.py`, `A_LA_SOMBRA`: la sombra de la
+misma piedra en un 0,6 y algo menos de contraste; aplanada del todo era un parche
+de color). Antes se pisaba, hecha UN SOLO PELDANO de la
+misma piedra del templo (`retoque_templo.py`, `UN_PELDANO`: la cara del peldanito
+de arriba, sin su canto, estirada hasta la terraza y tapando entero al de abajo;
+la sombra del obelisco se corre fila a fila para que siga con la inclinacion del
+fuste: estirada sin mas salia mas empinada y con un quiebro, "queda raro"; dejar
+abajo la arena del de abajo volvia a marcar una costura). El usuario: las piezas sueltas eran "un pegote en toda
+regla", "lo suyo es que sea un peldano sin escalerita, porque se notan las
+costuras". No lleva a ningun otro sitio: es para que se vea que al altar se puede
+subir. La base del obelisco de la derecha no se pisa (fondo). (Rechazados, por
+este orden: los dos peldanitos dibujados, "lo veo mas como background"; las
+piezas sueltas de `Downloads/segundo puzzle egipto`: la escalerita de dos bloques
+`kit_arenisca_32`, "hiper basta", tapaba el obelisco; un bloque suelto
+`kit_arenisca_23`; la losa con moldura `kit_arenisca_4`, "muy ancha"; el bloque
+con la losa volada `kit_arenisca_14` delante de la cara en sombra del altar.)
 
 Arriba del altar (c014) empieza el video del templo (procesion y barco). La
 losa del altar no depende del video (el usuario: "son eventos independientes"):
@@ -93,7 +102,7 @@ Probar: `egipto_losa.bat` (en el altar, video ya visto); pilotos
 
 | de | a | x | altura | como |
 |---|---|---|---|---|
-| c014 el altar | c013 la terraza / c019 | 2818 / 2486 | baja 239 / 159 | se deja caer (a la derecha, a la terraza; a la izquierda, al peldano) |
+| c014 el altar | c013 la terraza / c016 | 2818 / 2436 | baja 239 / 173 | se deja caer (a la derecha, a la terraza; a la izquierda, al peldanito y de el a la terraza) |
 | c013 | la arena de la derecha | 3019 | baja 981 | **caida de alto** (andando con la tecla: la bajada de flotar; no con la losa fuera) |
 | arena | c002 | 3019 | sube 117 | salto |
 | c002 | c001 | 1968 | baja 72 | se deja caer |

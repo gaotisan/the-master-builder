@@ -98,21 +98,25 @@ CAJAS = {
         [1245, 1744, 245, 280],     # S14: la terraza de los obeliscos
         # el altar (lo mas alto: el mirador). Con su altura de la imagen
         # (2026-10-30, el usuario: sin la cornisa repetida, "lo suyo es tener
-        # solo un friso"): se sube desde la base de los obeliscos
-        # Desde su esquina de delante (1448; 2026-10-31): lo de la izquierda es su
-        # cara de un lado, en sombra (se ve de lado), y alli va el peldano, pegado
-        [1448, 1632, 112, 245],
+        # solo un friso"): se sube desde el peldanito pegado a el (desde 1420, el
+        # canto de su costado: el peldanito, entero hasta ahi; con 1408 era tan
+        # estrecho que el salto no caia encima)
+        [1420, 1632, 112, 245],
         # (lo de 2026-10-30, al final: los nombres de lo de antes no cambian)
         # EL BLOQUE GEMELO a la derecha del bloque de encima (retoque_templo.py):
         # el camino de vuelta, de la pasarela al bloque de encima
         [772, 890, 728, None],
-        # LAS BASES DE LOS OBELISCOS: eran el escalon (dos peldanitos dibujados)
-        # entre la terraza y el altar. Ya no se pisan, son fondo (2026-10-31, el
-        # usuario: "queda raro que se pueda subir, lo veo mas como background"):
-        # al altar se sube por el peldano de delante (kit_arenisca_14). Se
-        # quedan en la lista (con "fondo") para no cambiar los nombres de las
-        # demas
-        [1312, 1408, 210, 245, {"fondo": True}],
+        # EL PELDANITO PEGADO AL ALTAR: la piedra con luz entre la base del obelisco
+        # de la izquierda y el altar (2026-10-31, el usuario: "se ven como dos
+        # piedras"; que la base del obelisco "se vea que no se puede subir, de
+        # fondo" y solo se pise este). La base, hecha un solo peldano
+        # (retoque_templo.py UN_PELDANO: las piezas sueltas eran "un pegote en toda
+        # regla", "se notan las costuras") y a la sombra (A_LA_SOMBRA), no se pisa.
+        # De la terraza, un salto (67); de el al altar, la trepada mediana (173; o
+        # un salto andando). Con el mismo margen sobre su canto (212,5) que tenia la
+        # base. La base del obelisco de la derecha tampoco se pisa (fondo; se queda
+        # en la lista para no cambiar los nombres de las demas)
+        [1391, 1420, 208, 245],
         [1632, 1708, 210, 245, {"fondo": True}],
         # LOS TRES SALIENTES de encima de la pasarela, junto al bloque gemelo
         # (2026-10-31, el usuario: "quiero que se puedan usar tb aunque no lleven a
@@ -140,21 +144,9 @@ CAJAS = {
     # arriba abajo, mas alta de lo que se trepa (no se sube ni se salta)
     "kit_pilares_1": [
         [20, 450, 0, None],
-    ],
-    # EL PELDANO DEL ALTAR (2026-10-31, Downloads/segundo puzzle egipto, "Hojas de
-    # sprites de ruinas de arenisca"): el bloque con la losa volada (la mitad de
-    # ancho que la losa con moldura, kit_arenisca_4: el usuario, "muy ancho, que
-    # ocupe la mitad"), por delante de la cara en sombra del altar, con su
-    # cuerpo hasta la esquina de delante (que no se vea nada entre los dos: el
-    # usuario, "se ve algo entre medio", la base del altar); la base del
-    # obelisco queda entera a la vista. (Antes: la
-    # escalerita de dos bloques, "hiper basta"; un bloque suelto, "un pegote"; la
-    # losa con moldura, muy ancha.) De la terraza, un salto (80); de el al altar,
-    # la trepada mediana (160; o un salto andando). Lo que se pisa, hasta la cara
-    # del altar (113 de la pieza: el cuerpo); la cara de arriba, 4 px bajo lo que
-    # asoma
-    "kit_arenisca_14": [
-        [2, 113, 6, 132],
+        # (el hueco del peldano suelto del altar, quitado: un fondo para que los
+        # nombres de las de despues no cambien)
+        [0, 1, 0, 1, {"fondo": True}],
     ],
     # LAS RUINAS DE LA DERECHA (2026-10-31, Downloads/segundo puzzle egipto, "Ruinas
     # de templo"): un muro alto al que solo se llega por la losa que saca el altar
@@ -184,17 +176,10 @@ CAJAS = {
 # cielo en el monton de arena: tumbado ocupa de -170 a +160 px del peregrino,
 # y la camara no pasa de -800 (si no, quedaba medio cuerpo fuera de pantalla)
 X_TEMPLO = -120.0
-# el peldano del altar: su cara de arriba, 80 sobre la terraza
-ESC_PELDANO = 0.6627
 COLOCADAS = [
     ["templo_terrazas", X_TEMPLO, 1.8, 85.0, False],
     # (despues del templo: las cajas del templo siguen siendo c000-c014)
     ["kit_pilares_1", -1010.0, 1.0, 85.0, False],
-    # el peldano del altar, sobre la terraza (980,6; su pie, 3,5 metido), por
-    # delante de la cara en sombra del altar (que no se vea su base entre los
-    # dos): el canto derecho de su cuerpo (113 de la pieza) en la esquina de
-    # delante del altar (2486,4)
-    ["kit_arenisca_14", 2486.4 - 113 * ESC_PELDANO, ESC_PELDANO, -(980.6 - 3.5 - 3 * ESC_PELDANO), False],
 ]
 
 # EL ALTAR Y LA LOSA (2026-10-31, mecanismo_altar.gd): despues del video, de pie en
@@ -243,7 +228,7 @@ def en_ruinas(x, y):
 # Por delante de todo lo del recorrido (z): la losa tapa el monton de arena de
 # la caida, que se mete bajo ella (si no, sus piedras quedaban a los pies del
 # peregrino, "irreal")
-Z = {"kit_pilares_1": 10, "kit_arenisca_14": 1}
+Z = {"kit_pilares_1": 10}
 
 MARCAS = {
     # donde aparece el peregrino: abajo del todo, en la arena, antes del templo

@@ -181,6 +181,34 @@ CORRIDOS = [
     [496, 573, 418, 464, 57, 556, 461],
 ]
 
+# [x0, xl, x1, yf, yj, yl, yb, xa, xb, k]: DOS PELDANITOS EN UNO. La cara del de
+# arriba (yf..yj, de xl a x1; sin su canto de luz, que se queda como esta) estirada
+# hasta yl, la terraza: tapa entero al de abajo; lo que el de abajo sobresale por la
+# izquierda (x0..xl, de yj a yb), a cielo. Al estirar, la sombra del obelisco salia
+# mas empinada que en el fuste ("queda raro"): en la banda xa..xb cada fila se corre
+# lo que pide la inclinacion de esa sombra (k px por fila) desde la fila de donde viene
+UN_PELDANO = [
+    # LA BASE DEL OBELISCO DE LA IZQUIERDA, junto al altar (2026-10-31, el usuario:
+    # las piezas sueltas eran "un pegote en toda regla", "lo suyo es que sea un
+    # peldano sin escalerita, porque se notan las costuras"): un solo peldano de
+    # la misma piedra hasta la esquina de delante del altar (1440; de ahi, su
+    # base). Ya no se pisa (A_LA_SOMBRA): solo el peldanito con luz de su derecha
+    [1300, 1311, 1440, 218, 226, 243, 244, 1345, 1383, 0.75],
+]
+
+# [x0, x1, y0, y1, t, plano]: A LA SOMBRA, para que se lea como fondo (no se pisa).
+# Se oscurece con la sombra de la misma piedra (la de la cuna del obelisco y la del
+# costado del altar: SOMBRA, lo que queda de cada canal) en t, y se le quita
+# contraste (plano, hacia su color medio). Con mas plano (0,35) era un parche de color
+A_LA_SOMBRA = [
+    # la base del obelisco de la izquierda (2026-10-31, el usuario: "se ven como dos
+    # piedras, una pegada al altar y otra que seria la base del obelisco"; que esta
+    # "se vea que no se puede subir, de fondo"): solo se pisa el peldanito con luz
+    # pegado al altar, de 1391 en adelante
+    [1311, 1391, 214, 243.5, 0.6, 0.2],
+]
+SOMBRA = np.array([0.64, 0.46, 0.43])   # (BGR)
+
 
 def huella(ruta):
     return hashlib.sha1(open(ruta, "rb").read()).hexdigest()
@@ -262,6 +290,25 @@ def retocar(img, e):
         a_o = a_s + a_d * (1.0 - a_s)
         rgb = (src[..., :3] * a_s + antes[..., :3] * a_d * (1.0 - a_s)) / np.maximum(a_o, 1e-6)
         out[yb:y1, xb:x1 + dx] = np.dstack([rgb, a_o * 255.0]).round().astype(img.dtype)
+    for x0, xl, x1, yf, yj, yl, yb, xa, xb, k in UN_PELDANO:
+        x0, xl, x1, yf, yj, yl, yb, xa, xb = [v * e for v in (x0, xl, x1, yf, yj, yl, yb, xa, xb)]
+        trozo = out[yf:yj, xl:x1].copy()
+        est = cv2.resize(trozo, (x1 - xl, yl - yf), interpolation=cv2.INTER_CUBIC)
+        h, w = yl - yf, x1 - xl
+        de_fila = (np.arange(h) + 0.5) * (yj - yf) / h - 0.5
+        corre = (k * (np.arange(h) - de_fila)).astype(np.float32).reshape(-1, 1)
+        mx = np.tile(np.arange(w, dtype=np.float32), (h, 1))
+        my = np.tile(np.arange(h, dtype=np.float32).reshape(-1, 1), (1, w))
+        banda = (mx >= xa - xl) & (mx < xb - xl)
+        mx = np.where(banda, np.minimum(mx + corre, xb - xl - 1), mx).astype(np.float32)
+        out[yf:yl, xl:x1] = cv2.remap(est, mx, my, cv2.INTER_LINEAR)
+        out[yj:yb, x0:xl] = 0
+    for x0, x1, y0, y1, t, plano in A_LA_SOMBRA:
+        x0, x1, y0, y1 = [int(round(v * e)) for v in (x0, x1, y0, y1)]
+        rgb = out[y0:y1, x0:x1, :3].astype(np.float32) * (1.0 + (SOMBRA - 1.0) * t).astype(np.float32)
+        hay = out[y0:y1, x0:x1, 3] > 0
+        rgb = rgb * (1.0 - plano) + rgb[hay].mean(0) * plano
+        out[y0:y1, x0:x1, :3] = np.clip(np.round(rgb), 0, 255).astype(out.dtype)
     return out
 
 
